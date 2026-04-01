@@ -354,16 +354,5 @@ strong{color:var(--text-bright)}
 
     $html | Set-Content -Path $file -Encoding UTF8
 
-    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
-        try {
-            $acl = Get-Acl $file
-            $acl.SetAccessRuleProtection($true, $false)
-            $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule('Administrators','FullControl','Allow')))
-            Set-Acl $file $acl
-        } catch { Write-Warning "Could not restrict report permissions: $_" }
-    } else {
-        & chmod 600 $file 2>$null
-    }
-
     return $file
 }
