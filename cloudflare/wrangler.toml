@@ -1,0 +1,16 @@
+name = "ratcatcher"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ratcatcher"
+database_id = "PLACEHOLDER"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "ratcatcher-reports"
+
+[[routes]]
+pattern = "mbfromit.com/ratcatcher/*"
+zone_name = "mbfromit.com"
