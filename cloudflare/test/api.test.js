@@ -83,6 +83,43 @@ describe('handleSubmissions', () => {
     await handleSubmissions(get('/ratcatcher/api/submissions?page=3&limit=10'), env)
     expect(capturedOffset).toBe(20)
   })
+
+  it('defaults page to 1 when page param is non-numeric', async () => {
+    const env = makeEnv()
+    let capturedOffset = null
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 0 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn((...args) => {
+          capturedOffset = args[1]
+          return { all: vi.fn().mockResolvedValue({ results: [] }) }
+        })
+      })
+    await handleSubmissions(get('/ratcatcher/api/submissions?page=abc'), env)
+    expect(capturedOffset).toBe(0) // page defaults to 1, offset = (1-1)*50 = 0
+  })
+
+  it('caps limit at 100', async () => {
+    const env = makeEnv()
+    let capturedLimit = null
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 0 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn((...args) => {
+          capturedLimit = args[0]
+          return { all: vi.fn().mockResolvedValue({ results: [] }) }
+        })
+      })
+    await handleSubmissions(get('/ratcatcher/api/submissions?limit=999'), env)
+    expect(capturedLimit).toBe(100)
+  })
+
+  it('returns 500 when DB query fails', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({ first: vi.fn().mockRejectedValue(new Error('DB down')) }))
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    expect(res.status).toBe(500)
+  })
 })
 
 // ── /api/stats ──────────────────────────────────────────────────────────────
@@ -112,5 +149,12 @@ describe('handleStats', () => {
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     const body = await res.json()
     expect(body).toEqual({ total: 0, clean: 0, compromised: 0 })
+  })
+
+  it('returns 500 when DB query fails', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({ first: vi.fn().mockRejectedValue(new Error('DB down')) }))
+    const res = await handleStats(get('/ratcatcher/api/stats'), env)
+    expect(res.status).toBe(500)
   })
 })
