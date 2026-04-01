@@ -33,6 +33,25 @@ Describe 'Invoke-NpmCacheScan' {
         }
     }
 
+    Context 'CacheDirOverride bypasses npm config command' {
+        BeforeAll {
+            $overrideDir = Join-Path $TestDrive 'override-cache'
+            $indexDir    = Join-Path $overrideDir '_cacache/index-v5/ab/cd'
+            $null = New-Item -ItemType Directory -Path $indexDir -Force
+            '{"key":"https://registry.npmjs.org/plain-crypto-js/-/plain-crypto-js-4.2.1.tgz"}' |
+                Set-Content (Join-Path $indexDir 'entry')
+            Mock Get-Command { [PSCustomObject]@{ Name = 'npm' } } -ParameterFilter { $Name -eq 'npm' }
+        }
+        It 'finds NpmCacheHit using the override directory' {
+            $results = Invoke-NpmCacheScan -CacheDirOverride $overrideDir
+            ($results | Where-Object Type -eq 'NpmCacheHit') | Should -Not -BeNullOrEmpty
+        }
+        It 'does not invoke npm config get cache when override is provided' {
+            Mock Invoke-Expression { throw 'should not call npm config' } -ParameterFilter { $Command -match 'npm config get cache' }
+            { Invoke-NpmCacheScan -CacheDirOverride $overrideDir } | Should -Not -Throw
+        }
+    }
+
     Context 'malicious package installed globally' {
         BeforeAll {
             $fakeGlobal = Join-Path $TestDrive 'global-npm'

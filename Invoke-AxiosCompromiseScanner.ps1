@@ -29,7 +29,10 @@ param(
     [string[]]$ToAddress,
     [PSCredential]$Credential,
     [bool]$UseTLS           = $true,
-    [int]$Threads           = 4
+    [int]$Threads           = 4,
+    # Test-artifact overrides — point at synthetic data without touching real npm cache or firewall log
+    [string]$TestCacheDir,
+    [string]$TestFirewallLogPath
 )
 
 Set-StrictMode -Version Latest
@@ -140,7 +143,7 @@ $artifacts = @($rawArtifacts | Where-Object { $_ })
 
 # ── Check 4: npm cache ────────────────────────────────────────────────────────
 Write-Log "[4/10] Scanning npm cache and global npm..."
-$cacheFindings = @(Invoke-NpmCacheScan)
+$cacheFindings = @(Invoke-NpmCacheScan -CacheDirOverride $TestCacheDir)
 
 # ── Check 5: Dropped payloads ─────────────────────────────────────────────────
 Write-Log "[5/10] Searching for dropped RAT payloads in temp/appdata..."
@@ -156,7 +159,9 @@ $xorFindings = @(Search-XorEncodedC2)
 
 # ── Check 8: Network evidence ─────────────────────────────────────────────────
 Write-Log "[8/10] Checking network evidence (DNS cache, active connections, firewall log)..."
-$networkEvidence = @(Get-NetworkEvidence)
+$neParams = @{}
+if ($TestFirewallLogPath) { $neParams['FirewallLogPath'] = $TestFirewallLogPath }
+$networkEvidence = @(Get-NetworkEvidence @neParams)
 
 # ── Check 9: Generate report ──────────────────────────────────────────────────
 $duration = (Get-Date) - $startTime

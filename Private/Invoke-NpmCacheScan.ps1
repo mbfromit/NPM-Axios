@@ -1,6 +1,8 @@
 function Invoke-NpmCacheScan {
     [CmdletBinding()]
-    param()
+    param(
+        [string]$CacheDirOverride   # When set, skips 'npm config get cache' — used for test artifacts
+    )
 
     $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
 
@@ -14,7 +16,7 @@ function Invoke-NpmCacheScan {
 
     # ── npm content-addressable cache ──────────────────────────────────────────
     try {
-        $cacheDir = (Invoke-Expression 'npm config get cache' 2>$null).Trim()
+        $cacheDir = if ($CacheDirOverride) { $CacheDirOverride } else { (Invoke-Expression 'npm config get cache' 2>$null).Trim() }
         $indexDir = Join-Path $cacheDir '_cacache/index-v5'
 
         if (Test-Path $indexDir) {
