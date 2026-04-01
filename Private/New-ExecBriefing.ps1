@@ -64,8 +64,8 @@ function New-ExecBriefing {
     # ── What this means ────────────────────────────────────────────────────────
     if ($overallClean) {
         $meaningHtml = @'
-<p>No evidence of compromise was detected across all 8 checks. The malicious software either was never installed on this machine, or was fully removed before execution.</p>
-<p style="margin-top:10px;">This developer may resume work after completing standard lockfile cleanup (detailed in the technical report).</p>
+<p>No evidence of compromise was detected across all 8 checks. This machine was not affected by the Axios supply chain attack.</p>
+<p style="margin-top:10px;">This developer may continue work as normal. No remediation is required.</p>
 '@
     } else {
         $failList = ($failedChecks | ForEach-Object { "<li>Check $($_.Key) &mdash; $($_.Value.Name)</li>" }) -join ''
@@ -81,12 +81,8 @@ $c2warning
     # ── Required actions ───────────────────────────────────────────────────────
     if ($overallClean) {
         $actionsHtml = @'
-<div class="action-list">
-<div class="action-item"><div class="action-n">1</div><div class="action-t">Run: <code>npm install axios@1.14.0</code> (or <code>axios@0.30.3</code> for v0.x branches)</div></div>
-<div class="action-item"><div class="action-n">2</div><div class="action-t">Run: <code>npm cache clean --force</code></div></div>
-<div class="action-item"><div class="action-n">3</div><div class="action-t">Delete <code>node_modules/</code> and re-run <code>npm install</code></div></div>
-<div class="action-item"><div class="action-n">4</div><div class="action-t">No credential rotation required beyond standard hygiene.</div></div>
-</div>
+<p style="color:var(--pass);font-size:15px;font-weight:600;">&#10003; No action required.</p>
+<p style="margin-top:10px;color:var(--text-muted);">This machine shows no evidence of the Axios supply chain attack. No remediation, credential rotation, or cleanup is necessary as a result of this scan.</p>
 '@
     } else {
         $actionsHtml = @'
