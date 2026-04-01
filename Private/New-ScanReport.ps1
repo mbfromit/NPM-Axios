@@ -13,8 +13,17 @@ function New-ScanReport {
         [Parameter(Mandatory)][hashtable]$ScanMetadata
     )
 
+    # Normalise: typed params coerce $null to $null (not @()) under strict mode
+    $LockfileResults      = @($LockfileResults      | Where-Object { $_ })
+    $Artifacts            = @($Artifacts            | Where-Object { $_ })
+    $CacheFindings        = @($CacheFindings        | Where-Object { $_ })
+    $DroppedPayloads      = @($DroppedPayloads      | Where-Object { $_ })
+    $PersistenceArtifacts = @($PersistenceArtifacts | Where-Object { $_ })
+    $XorFindings          = @($XorFindings          | Where-Object { $_ })
+    $NetworkEvidence      = @($NetworkEvidence      | Where-Object { $_ })
+
     $vulnProjects   = @($LockfileResults     | Where-Object { $_.HasVulnerableAxios -or $_.HasMaliciousPlainCrypto })
-    $allFindings    = @($Artifacts) + @($CacheFindings) + @($DroppedPayloads) + @($PersistenceArtifacts) + @($XorFindings) + @($NetworkEvidence)
+    $allFindings    = $Artifacts + $CacheFindings + $DroppedPayloads + $PersistenceArtifacts + $XorFindings + $NetworkEvidence
     $criticalCount  = @($allFindings | Where-Object { $_.Severity -eq 'Critical' }).Count
     $overallStatus  = if ($vulnProjects.Count -gt 0 -or $allFindings.Count -gt 0) { 'COMPROMISED' } else { 'CLEAN' }
 

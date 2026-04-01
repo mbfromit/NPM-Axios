@@ -53,6 +53,28 @@ Describe 'Search-XorEncodedC2' {
         }
     }
 
+    Context 'files larger than 5 MB are skipped' {
+        BeforeAll {
+            $largeDir = Join-Path $TestDrive 'large-xor'
+            $null = New-Item -ItemType Directory $largeDir -Force
+
+            # Build a file that is >5 MB and contains a valid XOR-encoded C2 indicator
+            $key      = 'OrDeR_7077'
+            $constant = 333 -band 0xFF
+            $keyBytes = [Text.Encoding]::UTF8.GetBytes($key)
+            $srcBytes = [Text.Encoding]::UTF8.GetBytes('sfrclak.com')
+            $encoded  = New-Object byte[] $srcBytes.Length
+            for ($i = 0; $i -lt $srcBytes.Length; $i++) {
+                $encoded[$i] = [byte](($srcBytes[$i] -bxor $keyBytes[$i % $keyBytes.Length]) -bxor $constant)
+            }
+            $padding = New-Object byte[] (6 * 1024 * 1024)   # 6 MB of zeros
+            [IO.File]::WriteAllBytes((Join-Path $largeDir 'huge.bin'), ($padding + $encoded))
+        }
+        It 'returns no findings for a file over 5 MB' {
+            Search-XorEncodedC2 -SearchPaths @($largeDir) | Should -BeNullOrEmpty
+        }
+    }
+
     Context 'clean file' {
         BeforeAll {
             $cleanDir  = Join-Path $TestDrive 'clean-xor'

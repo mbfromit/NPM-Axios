@@ -20,6 +20,24 @@ BeforeAll {
 }
 
 Describe 'New-ExecBriefing' {
+    Context 'null collection inputs do not throw' {
+        It 'generates briefing when optional collections are null' {
+            {
+                New-ExecBriefing -ProjectCount 0 -LockfileResults $null `
+                    -Artifacts $null -CacheFindings $null -DroppedPayloads $null `
+                    -PersistenceArtifacts $null -XorFindings $null -NetworkEvidence $null `
+                    -TechnicalReportPath $fakeReport -OutputPath $outDir -ScanMetadata $metadata
+            } | Should -Not -Throw
+        }
+        It 'verdict is CLEAN when null inputs and no findings' {
+            $p = New-ExecBriefing -ProjectCount 0 -LockfileResults $null `
+                -Artifacts $null -CacheFindings $null -DroppedPayloads $null `
+                -PersistenceArtifacts $null -XorFindings $null -NetworkEvidence $null `
+                -TechnicalReportPath $fakeReport -OutputPath $outDir -ScanMetadata $metadata
+            Get-Content $p -Raw | Should -Match 'CLEAN'
+        }
+    }
+
     Context 'generates briefing file' {
         BeforeAll {
             $path = New-ExecBriefing -ProjectCount 2 -LockfileResults @($cleanLockfile) `

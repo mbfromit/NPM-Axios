@@ -42,6 +42,28 @@ Describe 'New-ScanReport' {
     It 'contains IOC REFERENCE appendix'              { Get-Content $reportPath -Raw | Should -Match 'sfrclak\.com' }
     It 'contains REMEDIATION GUIDANCE'                { Get-Content $reportPath -Raw | Should -Match 'npm cache clean' }
 
+    Context 'null collection inputs do not throw' {
+        It 'generates report when optional collections are null' {
+            {
+                New-ScanReport `
+                    -Projects            @([PSCustomObject]@{ ProjectPath='C:\ok'; PackageJsonPath='C:\ok\package.json' }) `
+                    -LockfileResults     @([PSCustomObject]@{ ProjectPath='C:\ok'; HasVulnerableAxios=$false; HasMaliciousPlainCrypto=$false; LockfileType='npm'; LockfilePath=''; VulnerableAxiosVersion=$null; Error=$null }) `
+                    -Artifacts           $null -CacheFindings $null -DroppedPayloads $null `
+                    -PersistenceArtifacts $null -XorFindings $null -NetworkEvidence $null `
+                    -OutputPath          $outDir -ScanMetadata $metadata
+            } | Should -Not -Throw
+        }
+        It 'shows CLEAN when null collections passed' {
+            $p = New-ScanReport `
+                -Projects            @([PSCustomObject]@{ ProjectPath='C:\ok'; PackageJsonPath='C:\ok\package.json' }) `
+                -LockfileResults     @([PSCustomObject]@{ ProjectPath='C:\ok'; HasVulnerableAxios=$false; HasMaliciousPlainCrypto=$false; LockfileType='npm'; LockfilePath=''; VulnerableAxiosVersion=$null; Error=$null }) `
+                -Artifacts           $null -CacheFindings $null -DroppedPayloads $null `
+                -PersistenceArtifacts $null -XorFindings $null -NetworkEvidence $null `
+                -OutputPath          $outDir -ScanMetadata $metadata
+            Get-Content $p -Raw | Should -Match 'CLEAN'
+        }
+    }
+
     Context 'clean scan' {
         It 'shows CLEAN status' {
             $cleanPath = New-ScanReport `

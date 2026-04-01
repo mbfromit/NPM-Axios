@@ -120,43 +120,43 @@ Write-Log "Found $($projects.Count) project(s)"
 # ── Checks 2 & 3: Lockfile analysis + artifact detection (parallel on PS7) ───
 if ($PSVersionTable.PSVersion.Major -ge 7 -and $projects.Count -gt 0) {
     Write-Log "[2/10] Analysing lockfiles (parallel, $Threads threads)..."
-    $lockfileResults = $projects | ForEach-Object -Parallel {
+    $lockfileResults = @($projects | ForEach-Object -Parallel {
         . (Join-Path $using:pvt 'Invoke-LockfileAnalysis.ps1')
         Invoke-LockfileAnalysis -ProjectPath $_.ProjectPath
-    } -ThrottleLimit $Threads
+    } -ThrottleLimit $Threads)
 
     Write-Log "[3/10] Detecting project-level forensic artifacts (parallel)..."
-    $rawArtifacts = $projects | ForEach-Object -Parallel {
+    $rawArtifacts = @($projects | ForEach-Object -Parallel {
         . (Join-Path $using:pvt 'Find-ForensicArtifacts.ps1')
         Find-ForensicArtifacts -ProjectPath $_.ProjectPath
-    } -ThrottleLimit $Threads
+    } -ThrottleLimit $Threads)
 } else {
     Write-Log "[2/10] Analysing lockfiles (sequential)..."
-    $lockfileResults = $projects | ForEach-Object { Invoke-LockfileAnalysis -ProjectPath $_.ProjectPath }
+    $lockfileResults = @($projects | ForEach-Object { Invoke-LockfileAnalysis -ProjectPath $_.ProjectPath })
     Write-Log "[3/10] Detecting project-level forensic artifacts..."
-    $rawArtifacts    = $projects | ForEach-Object { Find-ForensicArtifacts -ProjectPath $_.ProjectPath }
+    $rawArtifacts    = @($projects | ForEach-Object { Find-ForensicArtifacts -ProjectPath $_.ProjectPath })
 }
 $artifacts = @($rawArtifacts | Where-Object { $_ })
 
 # ── Check 4: npm cache ────────────────────────────────────────────────────────
 Write-Log "[4/10] Scanning npm cache and global npm..."
-$cacheFindings = Invoke-NpmCacheScan
+$cacheFindings = @(Invoke-NpmCacheScan)
 
 # ── Check 5: Dropped payloads ─────────────────────────────────────────────────
 Write-Log "[5/10] Searching for dropped RAT payloads in temp/appdata..."
-$droppedPayloads = Search-DroppedPayloads -AttackWindowStart $attackWindow
+$droppedPayloads = @(Search-DroppedPayloads -AttackWindowStart $attackWindow)
 
 # ── Check 6: Persistence ──────────────────────────────────────────────────────
 Write-Log "[6/10] Checking persistence mechanisms (tasks, registry, startup)..."
-$persistenceArtifacts = Find-PersistenceArtifacts -AttackWindowStart $attackWindow
+$persistenceArtifacts = @(Find-PersistenceArtifacts -AttackWindowStart $attackWindow)
 
 # ── Check 7: XOR-encoded indicators ──────────────────────────────────────────
 Write-Log "[7/10] Scanning for XOR-encoded C2 indicators..."
-$xorFindings = Search-XorEncodedC2
+$xorFindings = @(Search-XorEncodedC2)
 
 # ── Check 8: Network evidence ─────────────────────────────────────────────────
 Write-Log "[8/10] Checking network evidence (DNS cache, active connections, firewall log)..."
-$networkEvidence = Get-NetworkEvidence
+$networkEvidence = @(Get-NetworkEvidence)
 
 # ── Check 9: Generate report ──────────────────────────────────────────────────
 $duration = (Get-Date) - $startTime
