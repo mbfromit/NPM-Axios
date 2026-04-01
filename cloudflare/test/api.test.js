@@ -158,3 +158,81 @@ describe('handleStats', () => {
     expect(res.status).toBe(500)
   })
 })
+
+// ── /api/report/:id/:type ───────────────────────────────────────────────────
+
+describe('handleReport', () => {
+  it('returns 401 without admin password', async () => {
+    const res = await handleReport(get('/ratcatcher/api/report/x/brief', ''), makeEnv(), 'x', 'brief')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 404 HTML when submission ID not found in DB', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({ bind: vi.fn(() => ({ first: vi.fn().mockResolvedValue(null) })) }))
+    const res = await handleReport(get('/ratcatcher/api/report/missing/brief'), env, 'missing', 'brief')
+    expect(res.status).toBe(404)
+    const html = await res.text()
+    expect(html).toContain('no longer available')
+  })
+
+  it('returns 404 HTML when R2 object is missing', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'submissions/x/brief.html', report_key: 'submissions/x/report.html' })
+      }))
+    }))
+    env.BUCKET.get = vi.fn().mockResolvedValue(null)
+    const res = await handleReport(get('/ratcatcher/api/report/x/brief'), env, 'x', 'brief')
+    expect(res.status).toBe(404)
+    const html = await res.text()
+    expect(html).toContain('no longer available')
+  })
+
+  it('injects Full Report banner into brief HTML', async () => {
+    const env = makeEnv()
+    const briefHtml = '<html><body><h1>Brief</h1></body></html>'
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'submissions/abc/brief.html', report_key: 'submissions/abc/report.html' })
+      }))
+    }))
+    env.BUCKET.get = vi.fn().mockResolvedValue({ text: async () => briefHtml })
+    const res = await handleReport(get('/ratcatcher/api/report/abc/brief'), env, 'abc', 'brief')
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('Full Technical Report')
+    expect(html).toContain('/ratcatcher/api/report/abc/full')
+    expect(html).toContain('<h1>Brief</h1>')
+  })
+
+  it('serves full report HTML without banner injection', async () => {
+    const env = makeEnv()
+    const reportHtml = '<html><body><h1>Full Report</h1></body></html>'
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'submissions/abc/brief.html', report_key: 'submissions/abc/report.html' })
+      }))
+    }))
+    env.BUCKET.get = vi.fn().mockResolvedValue({ text: async () => reportHtml })
+    const res = await handleReport(get('/ratcatcher/api/report/abc/full'), env, 'abc', 'full')
+    expect(res.status).toBe(200)
+    const html = await res.text()
+    expect(html).toContain('<h1>Full Report</h1>')
+    expect(html).not.toContain('Full Technical Report')
+  })
+
+  it('fetches brief_key for brief type and report_key for full type', async () => {
+    const env = makeEnv()
+    let capturedKey = null
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'submissions/abc/brief.html', report_key: 'submissions/abc/report.html' })
+      }))
+    }))
+    env.BUCKET.get = vi.fn(key => { capturedKey = key; return Promise.resolve({ text: async () => '<body></body>' }) })
+    await handleReport(get('/ratcatcher/api/report/abc/full'), env, 'abc', 'full')
+    expect(capturedKey).toBe('submissions/abc/report.html')
+  })
+})
