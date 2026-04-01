@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Scans for evidence of the March 31, 2026 Axios NPM supply chain attack.
+    RatCatcher — scans for evidence of the March 31, 2026 Axios NPM supply chain attack.
 .DESCRIPTION
     Runs ten checks covering the full compromise kill chain:
     lockfile evidence, deployed package artifacts, npm cache, dropped RAT payloads,
@@ -14,9 +14,9 @@
 .PARAMETER SendEmail
     Send the report by email. Requires -SMTPServer, -FromAddress, -ToAddress.
 .EXAMPLE
-    .\Invoke-AxiosCompromiseScanner.ps1
+    .\Invoke-RatCatcher.ps1
 .EXAMPLE
-    .\Invoke-AxiosCompromiseScanner.ps1 -Path C:\Dev -SendEmail -SMTPServer smtp.co.com -FromAddress sec@co.com -ToAddress ir@co.com
+    .\Invoke-RatCatcher.ps1 -Path C:\Dev -SendEmail -SMTPServer smtp.co.com -FromAddress sec@co.com -ToAddress ir@co.com
 #>
 [CmdletBinding()]
 param(
@@ -83,7 +83,7 @@ foreach ($root in $Path) {
 # ── Confirmation prompt ────────────────────────────────────────────────────────
 Write-Host ''
 Write-Host '================================================================'
-Write-Host '  AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER'
+Write-Host '  RATCATCHER'
 Write-Host '================================================================'
 Write-Host ''
 Write-Host '  The following folders will be scanned on this machine:'
@@ -99,7 +99,7 @@ Write-Host ''
 $null = New-Item -ItemType Directory -Path $OutputPath -Force
 $hn   = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
 $ts   = Get-Date -Format 'yyyyMMdd-HHmmss'
-$log  = Join-Path $OutputPath "Axios-Scan-${hn}-${ts}.log"
+$log  = Join-Path $OutputPath "RatCatcher-${hn}-${ts}.log"
 
 function Write-Log {
     param([string]$Msg, [string]$Level = 'INFO')
@@ -111,7 +111,7 @@ function Write-Log {
 $attackWindow = [datetime]::Parse('2026-03-31T00:21:00Z').ToLocalTime()
 $startTime    = Get-Date
 
-Write-Log "Axios Compromise Scanner - 10-check suite"
+Write-Log "RatCatcher - 10-check suite"
 Write-Log "Attack window start: $attackWindow"
 Write-Log "Scanning paths: $($resolvedPaths -join ', ')"
 

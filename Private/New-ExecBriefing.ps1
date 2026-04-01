@@ -104,7 +104,7 @@ function New-ExecBriefing {
     function Ln  { param([string]$s = '') [void]$sb.AppendLine($s) }
 
     HR
-    Ln 'AXIOS SUPPLY CHAIN ATTACK - EXECUTIVE SECURITY BRIEFING'
+    Ln 'RATCATCHER - EXECUTIVE SECURITY BRIEFING'
     Ln "Prepared : $($ScanMetadata.Timestamp)"
     Ln "Machine  : $($ScanMetadata.Hostname)   |   Analyst: $($ScanMetadata.Username)"
     HR
@@ -209,7 +209,7 @@ function New-ExecBriefing {
 
     $ts   = Get-Date -Format 'yyyyMMdd-HHmmss'
     $hn   = $ScanMetadata.Hostname
-    $file = Join-Path $OutputPath "ExecBriefing-${hn}-${ts}.txt"
+    $file = Join-Path $OutputPath "RatCatcher-Brief-${hn}-${ts}.txt"
 
     $sb.ToString() | Set-Content -Path $file -Encoding UTF8
 

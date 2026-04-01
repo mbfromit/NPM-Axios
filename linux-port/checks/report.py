@@ -19,14 +19,14 @@ def write_reports(
     ts = scan_metadata['timestamp']
     hn = scan_metadata['hostname']
 
-    tech_path = os.path.join(output_dir, f'Axios-Scan-{hn}-{ts}.txt')
+    tech_path = os.path.join(output_dir, f'RatCatcher-Report-{hn}-{ts}.txt')
     _write_technical(tech_path, projects, lockfile_results, artifacts, cache_findings,
                      dropped_payloads, persistence_artifacts, xor_findings,
                      network_evidence, vuln_projects, all_findings, critical_count,
                      overall, scan_metadata)
     os.chmod(tech_path, 0o600)
 
-    brief_path = os.path.join(output_dir, f'ExecBriefing-{hn}-{ts}.txt')
+    brief_path = os.path.join(output_dir, f'RatCatcher-Brief-{hn}-{ts}.txt')
     _write_briefing(brief_path, projects, lockfile_results, artifacts, cache_findings,
                     dropped_payloads, persistence_artifacts, xor_findings,
                     network_evidence, tech_path, scan_metadata)
@@ -45,7 +45,7 @@ def _write_technical(path, projects, lockfile_results, artifacts, cache_findings
     def h(title): lines.extend(['', title, '-' * 60])
     def ln(s=''): lines.append(s)
 
-    ln(W); ln('AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER - FORENSIC REPORT'); ln(W)
+    ln(W); ln('RATCATCHER - FORENSIC REPORT'); ln(W)
 
     h('EXECUTIVE SUMMARY')
     ln(f'Total projects scanned    : {len(projects)}')
@@ -186,7 +186,7 @@ def _write_briefing(path, projects, lockfile_results, artifacts, cache_findings,
     def hr(): ln(W)
     def hr2(): ln('-' * 68)
 
-    hr(); ln('AXIOS SUPPLY CHAIN ATTACK - EXECUTIVE SECURITY BRIEFING')
+    hr(); ln('RATCATCHER - EXECUTIVE SECURITY BRIEFING')
     ln(f'Prepared : {meta["timestamp"]}')
     ln(f'Machine  : {meta["hostname"]}   |   Analyst: {meta["username"]}')
     hr(); ln()

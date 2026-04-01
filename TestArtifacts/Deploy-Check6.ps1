@@ -6,11 +6,11 @@
   IMPORTANT: Run Remove-All.ps1 (or Remove-Check6.ps1) after testing to delete this key.
 .USAGE
   .\Deploy-Check6.ps1
-  .\Invoke-AxiosCompromiseScanner.ps1
+  .\Invoke-RatCatcher.ps1
 #>
 
 $regPath  = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-$keyName  = 'AxiosScannerTest'
+$keyName  = 'RatCatcherTest'
 $keyValue = "powershell.exe -WindowStyle Hidden -NonInteractive -File `"$env:TEMP\axios-test-helper.ps1`""
 
 Set-ItemProperty -Path $regPath -Name $keyName -Value $keyValue

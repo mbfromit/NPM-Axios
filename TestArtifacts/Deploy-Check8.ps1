@@ -6,10 +6,10 @@
   Note: Uses -TestFirewallLogPath so the real system firewall log is never modified.
 .USAGE
   .\Deploy-Check8.ps1
-  .\Invoke-AxiosCompromiseScanner.ps1 -TestFirewallLogPath C:\AxiosScannerTest\Check8\test-pfirewall.log
+  .\Invoke-RatCatcher.ps1 -TestFirewallLogPath C:\RatCatcherTest\Check8\test-pfirewall.log
 #>
 
-$logPath = 'C:\AxiosScannerTest\Check8\test-pfirewall.log'
+$logPath = 'C:\RatCatcherTest\Check8\test-pfirewall.log'
 $null    = New-Item -ItemType Directory -Path (Split-Path $logPath) -Force
 
 @"
@@ -25,4 +25,4 @@ $null    = New-Item -ItemType Directory -Path (Split-Path $logPath) -Force
 Write-Host "[CHECK 8] Artifact deployed: $logPath"
 Write-Host "[CHECK 8] Expected finding:  FirewallLogHit (High) — traffic to C2 IP 142.11.206.73"
 Write-Host "[CHECK 8] Scan command requires -TestFirewallLogPath flag:"
-Write-Host "          .\Invoke-AxiosCompromiseScanner.ps1 -TestFirewallLogPath `"$logPath`""
+Write-Host "          .\Invoke-RatCatcher.ps1 -TestFirewallLogPath `"$logPath`""

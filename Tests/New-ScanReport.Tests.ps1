@@ -25,7 +25,7 @@ BeforeAll {
 
 Describe 'New-ScanReport' {
     It 'creates report file'                          { Test-Path $reportPath | Should -BeTrue }
-    It 'filename contains Axios-Scan-'                { [IO.Path]::GetFileName($reportPath) | Should -Match 'Axios-Scan-' }
+    It 'filename contains RatCatcher-Report-'         { [IO.Path]::GetFileName($reportPath) | Should -Match 'RatCatcher-Report-' }
     It 'contains EXECUTIVE SUMMARY'                   { Get-Content $reportPath -Raw | Should -Match 'EXECUTIVE SUMMARY' }
     It 'shows COMPROMISED status'                     { Get-Content $reportPath -Raw | Should -Match 'COMPROMISED' }
     It 'shows correct project count'                  { Get-Content $reportPath -Raw | Should -Match 'Total projects scanned\s*:\s*1' }

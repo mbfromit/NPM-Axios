@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Axios NPM supply chain compromise scanner — Linux/Python port."""
+"""RatCatcher — Axios NPM supply chain compromise scanner (Linux/Python port)."""
 
 import argparse
 import concurrent.futures
@@ -31,7 +31,7 @@ def scan(paths, output_dir='/tmp', threads=4):
     def log(msg, level='INFO'):
         print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] [{level}] {msg}")
 
-    log('Axios Compromise Scanner - 9-check suite')
+    log('RatCatcher - 9-check suite')
     log(f'Scanning paths: {", ".join(str(p) for p in paths)}')
 
     # Check 1: Project discovery
@@ -133,7 +133,7 @@ def _resolve_paths(raw_paths):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Axios NPM supply chain compromise scanner (Linux/Python port)')
+        description='RatCatcher — Axios NPM supply chain compromise scanner (Linux/Python port)')
     parser.add_argument('--path', nargs='+', default=['/'], metavar='PATH',
                         help='Paths to scan (default: /)')
     parser.add_argument('--output', default='/tmp', metavar='DIR',
@@ -146,7 +146,7 @@ def main():
 
     print()
     print('================================================================')
-    print('  AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER')
+    print('  RATCATCHER')
     print('================================================================')
     print()
     print('  The following folders will be scanned:')

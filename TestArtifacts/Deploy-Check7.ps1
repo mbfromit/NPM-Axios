@@ -7,7 +7,7 @@
   Triggers: Check 7 (Obfuscated Attack Signals) — XorEncodedC2 (Critical)
 .USAGE
   .\Deploy-Check7.ps1
-  .\Invoke-AxiosCompromiseScanner.ps1
+  .\Invoke-RatCatcher.ps1
 #>
 
 $key      = 'OrDeR_7077'
@@ -24,7 +24,7 @@ for ($i = 0; $i -lt $srcBytes.Length; $i++) {
 $junk    = [byte[]](1..200 | ForEach-Object { Get-Random -Maximum 256 })
 $payload = $junk + $encoded + $junk
 
-$artifactPath = Join-Path $env:TEMP 'axios-test-c2beacon.bin'
+$artifactPath = Join-Path $env:TEMP 'ratcatcher-test-c2beacon.bin'
 [IO.File]::WriteAllBytes($artifactPath, $payload)
 
 Write-Host "[CHECK 7] Artifact deployed: $artifactPath"

@@ -6,10 +6,10 @@
   Triggers: Check 5 (Dropped Malware Payloads) — DroppedExecutable (Critical)
 .USAGE
   .\Deploy-Check5.ps1
-  .\Invoke-AxiosCompromiseScanner.ps1
+  .\Invoke-RatCatcher.ps1
 #>
 
-$artifactPath = Join-Path $env:TEMP 'axios-test-dropper.exe'
+$artifactPath = Join-Path $env:TEMP 'ratcatcher-test-dropper.exe'
 
 # Minimal PE stub: MZ magic bytes only — clearly not a real executable
 [byte[]]$mzStub = 0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00

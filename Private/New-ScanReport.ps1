@@ -33,7 +33,7 @@ function New-ScanReport {
     function Add-Line    { param([string]$Line)  [void]$sb.AppendLine($Line) }
 
     [void]$sb.AppendLine('=' * 80)
-    [void]$sb.AppendLine('AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER - FORENSIC REPORT')
+    [void]$sb.AppendLine('RATCATCHER - FORENSIC REPORT')
     [void]$sb.AppendLine('=' * 80)
 
     Add-Section 'EXECUTIVE SUMMARY'
@@ -180,7 +180,7 @@ function New-ScanReport {
     $null = New-Item -ItemType Directory -Path $OutputPath -Force
     $ts       = Get-Date -Format 'yyyyMMdd-HHmmss'
     $hn       = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
-    $filePath = Join-Path $OutputPath "Axios-Scan-${hn}-${ts}.txt"
+    $filePath = Join-Path $OutputPath "RatCatcher-Report-${hn}-${ts}.txt"
 
     $sb.ToString() | Set-Content -Path $filePath -Encoding UTF8
 

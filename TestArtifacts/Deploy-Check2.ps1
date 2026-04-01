@@ -5,15 +5,15 @@
   Triggers: Check 2 (Dependency Lockfiles) — FAIL, 1 vulnerable project
 .USAGE
   .\Deploy-Check2.ps1
-  .\Invoke-AxiosCompromiseScanner.ps1 -Path C:\AxiosScannerTest\Check2
+  .\Invoke-RatCatcher.ps1 -Path C:\RatCatcherTest\Check2
 #>
 
-$base = 'C:\AxiosScannerTest\Check2'
+$base = 'C:\RatCatcherTest\Check2'
 $null = New-Item -ItemType Directory -Path $base -Force
 
 @'
 {
-  "name": "axios-scanner-check2-test",
+  "name": "ratcatcher-check2-test",
   "version": "1.0.0",
   "dependencies": { "axios": "1.14.1", "plain-crypto-js": "4.2.1" }
 }
@@ -21,7 +21,7 @@ $null = New-Item -ItemType Directory -Path $base -Force
 
 @'
 {
-  "name": "axios-scanner-check2-test",
+  "name": "ratcatcher-check2-test",
   "version": "1.0.0",
   "lockfileVersion": 3,
   "requires": true,

@@ -8,7 +8,7 @@ FIXTURES = os.path.join(os.path.dirname(__file__), 'fixtures')
 
 class TestScannerIntegration(unittest.TestCase):
     def test_vulnerable_fixtures_exit_code_1(self):
-        from axios_scanner import scan
+        from ratcatcher import scan
         with tempfile.TemporaryDirectory() as out_dir:
             exit_code, tech_path, brief_path = scan(
                 paths=[FIXTURES], output_dir=out_dir, threads=1)
@@ -20,27 +20,27 @@ class TestScannerIntegration(unittest.TestCase):
             self.assertIn('1.14.1', content)
 
     def test_clean_project_exit_code_0_when_system_checks_clean(self):
-        from axios_scanner import scan
+        from ratcatcher import scan
         # Mock system-wide checks so we only test lockfile analysis against CleanProject
         with tempfile.TemporaryDirectory() as out_dir:
-            with patch('axios_scanner.scan_npm_cache', return_value=[]), \
-                 patch('axios_scanner.scan_dropped_payloads', return_value=[]), \
-                 patch('axios_scanner.find_persistence_artifacts', return_value=[]), \
-                 patch('axios_scanner.scan_xor_encoded_c2', return_value=[]), \
-                 patch('axios_scanner.get_network_evidence', return_value=[]):
+            with patch('ratcatcher.scan_npm_cache', return_value=[]), \
+                 patch('ratcatcher.scan_dropped_payloads', return_value=[]), \
+                 patch('ratcatcher.find_persistence_artifacts', return_value=[]), \
+                 patch('ratcatcher.scan_xor_encoded_c2', return_value=[]), \
+                 patch('ratcatcher.get_network_evidence', return_value=[]):
                 exit_code, _, _ = scan(
                     paths=[os.path.join(FIXTURES, 'CleanProject')],
                     output_dir=out_dir, threads=1)
         self.assertEqual(exit_code, 0)
 
     def test_nonexistent_path_doesnt_crash(self):
-        from axios_scanner import scan
+        from ratcatcher import scan
         with tempfile.TemporaryDirectory() as out_dir:
-            with patch('axios_scanner.scan_npm_cache', return_value=[]), \
-                 patch('axios_scanner.scan_dropped_payloads', return_value=[]), \
-                 patch('axios_scanner.find_persistence_artifacts', return_value=[]), \
-                 patch('axios_scanner.scan_xor_encoded_c2', return_value=[]), \
-                 patch('axios_scanner.get_network_evidence', return_value=[]):
+            with patch('ratcatcher.scan_npm_cache', return_value=[]), \
+                 patch('ratcatcher.scan_dropped_payloads', return_value=[]), \
+                 patch('ratcatcher.find_persistence_artifacts', return_value=[]), \
+                 patch('ratcatcher.scan_xor_encoded_c2', return_value=[]), \
+                 patch('ratcatcher.get_network_evidence', return_value=[]):
                 exit_code, tech, brief = scan(
                     paths=['/nonexistent/path/xyz'], output_dir=out_dir, threads=1)
             self.assertIn(exit_code, [0, 1])
