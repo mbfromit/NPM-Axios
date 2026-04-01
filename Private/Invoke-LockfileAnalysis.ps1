@@ -21,15 +21,14 @@ function Invoke-LockfileAnalysis {
     if (Test-Path $pkgLock) {
         $result.LockfileType = 'npm'; $result.LockfilePath = $pkgLock
         try {
-            $lock = Get-Content $pkgLock -Raw | ConvertFrom-Json -ErrorAction Stop
-            $props = if ($lock.packages) { $lock.packages.PSObject.Properties }
-                     elseif ($lock.dependencies) { $lock.dependencies.PSObject.Properties }
-                     else { @() }
-            foreach ($p in $props) {
-                $name = $p.Name -replace '^node_modules/', ''
-                $ver  = $p.Value.version
-                if ($name -eq 'axios' -and $ver -in $vulnAxios) { $result.HasVulnerableAxios = $true; $result.VulnerableAxiosVersion = $ver }
-                if ($name -eq 'plain-crypto-js' -and $ver -eq $vulnCrypto) { $result.HasMaliciousPlainCrypto = $true }
+            $content = Get-Content $pkgLock -Raw -ErrorAction Stop
+            # Regex search avoids ConvertFrom-Json which is very slow on large lockfiles in PS5.1.
+            # In npm lockfiles (v1/v2/v3) "version" is always the first property after the package key.
+            foreach ($m in [regex]::Matches($content, '"(?:node_modules/)?axios"\s*:\s*\{[^"]*"version"\s*:\s*"([^"]+)"')) {
+                if ($m.Groups[1].Value -in $vulnAxios) { $result.HasVulnerableAxios = $true; $result.VulnerableAxiosVersion = $m.Groups[1].Value }
+            }
+            foreach ($m in [regex]::Matches($content, '"(?:node_modules/)?plain-crypto-js"\s*:\s*\{[^"]*"version"\s*:\s*"([^"]+)"')) {
+                if ($m.Groups[1].Value -eq $vulnCrypto) { $result.HasMaliciousPlainCrypto = $true }
             }
         } catch { $result.Error = "Failed to parse package-lock.json: $_" }
 
