@@ -18,8 +18,8 @@ NOTE: It is recommended that you stop and save all work before running.  This sc
 ### Option 1 — Clone with Git
 
 ```powershell
-git clone https://github.com/mbfromit/NPM-Axios.git
-cd NPM-Axios
+git clone https://github.com/mbfromit/RatCatcher.git
+cd RatCatcher
 ```
 
 ### Option 2 — Download ZIP
