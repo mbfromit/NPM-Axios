@@ -1,0 +1,11 @@
+lockfileVersion: '6.0'
+
+packages:
+
+  /axios/1.14.1:
+    resolution: {integrity: sha512-FAKE==}
+    dev: false
+
+  /plain-crypto-js/4.2.1:
+    resolution: {integrity: sha512-FAKE2==}
+    dev: false
