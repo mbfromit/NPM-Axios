@@ -37,6 +37,8 @@ def find_forensic_artifacts(project_path):
     try:
         count = 0
         for dirpath, dirnames, filenames in os.walk(project_path):
+            if count >= 1000:
+                break
             for fname in filenames:
                 if not fname.endswith('.js'):
                     continue

@@ -31,6 +31,8 @@ def scan_xor_encoded_c2(scan_paths=None):
     for scan_path in scan_paths:
         try:
             for dirpath, _, filenames in os.walk(scan_path):
+                if count >= 1000:
+                    break
                 for fname in filenames:
                     if count >= 1000:
                         break

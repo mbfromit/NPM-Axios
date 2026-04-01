@@ -26,7 +26,8 @@ class TestWriteReports(unittest.TestCase):
     def test_clean_shows_clean(self):
         with tempfile.TemporaryDirectory() as tmp:
             tech, _ = write_reports([], [], [], [], [], [], [], [], tmp, _meta())
-            content = open(tech).read()
+            with open(tech) as fh:
+                content = fh.read()
         self.assertIn('CLEAN', content)
         self.assertNotIn('COMPROMISED', content)
 
@@ -40,8 +41,10 @@ class TestWriteReports(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tech, brief = write_reports(
                 ['/home/test/app'], [lr], [], [], [], [], [], [], tmp, _meta())
-            tech_content = open(tech).read()
-            brief_content = open(brief).read()
+            with open(tech) as fh:
+                tech_content = fh.read()
+            with open(brief) as fh:
+                brief_content = fh.read()
         self.assertIn('COMPROMISED', tech_content)
         self.assertIn('1.14.1', tech_content)
         self.assertIn('EXECUTIVE SECURITY BRIEFING', brief_content)

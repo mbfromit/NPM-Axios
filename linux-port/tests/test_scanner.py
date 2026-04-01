@@ -15,7 +15,8 @@ class TestScannerIntegration(unittest.TestCase):
             self.assertEqual(exit_code, 1)
             self.assertTrue(os.path.isfile(tech_path))
             self.assertTrue(os.path.isfile(brief_path))
-            content = open(tech_path).read()
+            with open(tech_path) as fh:
+                content = fh.read()
             self.assertIn('1.14.1', content)
 
     def test_clean_project_exit_code_0_when_system_checks_clean(self):

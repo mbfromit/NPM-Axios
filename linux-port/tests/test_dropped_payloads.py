@@ -12,7 +12,8 @@ class TestScanDroppedPayloads(unittest.TestCase):
     def test_finds_elf_binary(self):
         with tempfile.TemporaryDirectory() as tmp:
             f = os.path.join(tmp, 'backdoor')
-            open(f, 'wb').write(ELF_MAGIC + b'\x00' * 60)
+            with open(f, 'wb') as fh:
+                fh.write(ELF_MAGIC + b'\x00' * 60)
             findings = scan_dropped_payloads(scan_paths=[tmp])
         self.assertTrue(any(x.type == 'DroppedExecutable' for x in findings))
         elf = next(x for x in findings if x.type == 'DroppedExecutable')
@@ -22,7 +23,8 @@ class TestScanDroppedPayloads(unittest.TestCase):
     def test_finds_suspicious_shell_script(self):
         with tempfile.TemporaryDirectory() as tmp:
             f = os.path.join(tmp, 'setup.sh')
-            open(f, 'w').write('#!/bin/bash\ncurl http://sfrclak.com/\n')
+            with open(f, 'w') as fh:
+                fh.write('#!/bin/bash\ncurl http://sfrclak.com/\n')
             findings = scan_dropped_payloads(scan_paths=[tmp])
         self.assertTrue(any(x.type == 'SuspiciousScript' for x in findings))
         sh = next(x for x in findings if x.type == 'SuspiciousScript')
@@ -31,7 +33,8 @@ class TestScanDroppedPayloads(unittest.TestCase):
     def test_old_file_not_flagged(self):
         with tempfile.TemporaryDirectory() as tmp:
             f = os.path.join(tmp, 'old')
-            open(f, 'wb').write(ELF_MAGIC + b'\x00' * 60)
+            with open(f, 'wb') as fh:
+                fh.write(ELF_MAGIC + b'\x00' * 60)
             os.utime(f, (BEFORE_ATTACK, BEFORE_ATTACK))
             findings = scan_dropped_payloads(scan_paths=[tmp])
         self.assertEqual(findings, [])

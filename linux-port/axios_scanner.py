@@ -101,12 +101,12 @@ def scan(paths, output_dir='/tmp', threads=4):
 
     vuln_count = sum(
         1 for lr in lockfile_results if lr.has_vulnerable_axios or lr.has_malicious_plain_crypto)
-    critical_count = sum(
-        1 for f in (artifacts + cache_findings + dropped_payloads +
-                    persistence_artifacts + xor_findings + network_evidence)
-        if f.severity == 'Critical')
+    any_finding = bool(
+        artifacts + cache_findings + dropped_payloads +
+        persistence_artifacts + xor_findings + network_evidence)
 
-    if vuln_count > 0 or critical_count > 0:
+    compromised = bool(vuln_count or any_finding)
+    if compromised:
         log(' STATUS: COMPROMISED - isolate machine and review reports', 'WARN')
         exit_code = 1
     else:

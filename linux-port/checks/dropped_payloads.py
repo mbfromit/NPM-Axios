@@ -25,6 +25,8 @@ def scan_dropped_payloads(scan_paths=None):
     for scan_path in scan_paths:
         try:
             for dirpath, _, filenames in os.walk(scan_path):
+                if count >= 2000:
+                    break
                 for fname in filenames:
                     if count >= 2000:
                         break

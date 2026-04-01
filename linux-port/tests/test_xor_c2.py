@@ -27,7 +27,8 @@ class TestScanXorEncodedC2(unittest.TestCase):
     def test_finds_encoded_ip_in_bin_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             payload = os.path.join(tmp, 'data.bin')
-            open(payload, 'wb').write(xor_encode(b'connecting to 142.11.206.73:8000'))
+            with open(payload, 'wb') as fh:
+                fh.write(xor_encode(b'connecting to 142.11.206.73:8000'))
             findings = scan_xor_encoded_c2(scan_paths=[tmp])
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].type, 'XorEncodedC2')
@@ -37,13 +38,15 @@ class TestScanXorEncodedC2(unittest.TestCase):
     def test_finds_encoded_domain_in_js_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             payload = os.path.join(tmp, 'loader.js')
-            open(payload, 'wb').write(xor_encode(b'beacon sfrclak.com'))
+            with open(payload, 'wb') as fh:
+                fh.write(xor_encode(b'beacon sfrclak.com'))
             findings = scan_xor_encoded_c2(scan_paths=[tmp])
         self.assertTrue(any(f.detail == 'sfrclak.com' for f in findings))
 
     def test_benign_binary_not_flagged(self):
         with tempfile.TemporaryDirectory() as tmp:
-            open(os.path.join(tmp, 'benign.bin'), 'wb').write(b'\x00' * 100)
+            with open(os.path.join(tmp, 'benign.bin'), 'wb') as fh:
+                fh.write(b'\x00' * 100)
             findings = scan_xor_encoded_c2(scan_paths=[tmp])
         self.assertEqual(findings, [])
 

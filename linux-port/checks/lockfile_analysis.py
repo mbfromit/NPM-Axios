@@ -13,6 +13,21 @@ LockfileResult = namedtuple('LockfileResult', [
 
 
 def analyze_lockfile(project_path):
+    try:
+        return _analyze_lockfile_inner(project_path)
+    except Exception as e:
+        return LockfileResult(
+            project_path=project_path,
+            has_vulnerable_axios=False,
+            vulnerable_axios_version=None,
+            has_malicious_plain_crypto=False,
+            lockfile_type=None,
+            lockfile_path=None,
+            error=f'Unexpected error: {e}',
+        )
+
+
+def _analyze_lockfile_inner(project_path):
     state = dict(
         project_path=project_path,
         has_vulnerable_axios=False,

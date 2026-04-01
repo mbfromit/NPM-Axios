@@ -18,7 +18,8 @@ class TestFindPersistenceArtifacts(unittest.TestCase):
     def test_suspicious_cron_file(self):
         with tempfile.TemporaryDirectory() as tmp:
             cron_file = os.path.join(tmp, 'evil')
-            open(cron_file, 'w').write('*/5 * * * * node /tmp/payload.js\n')
+            with open(cron_file, 'w') as fh:
+                fh.write('*/5 * * * * node /tmp/payload.js\n')
             os.utime(cron_file, (AFTER, AFTER))
             with patch('subprocess.run') as mock_run:
                 mock_run.return_value = MagicMock(returncode=1, stdout='')
@@ -29,7 +30,8 @@ class TestFindPersistenceArtifacts(unittest.TestCase):
     def test_rc_injection(self):
         with tempfile.TemporaryDirectory() as tmp:
             rc = os.path.join(tmp, '.bashrc')
-            open(rc, 'w').write('export PATH=/tmp/node/bin:$PATH\n')
+            with open(rc, 'w') as fh:
+                fh.write('export PATH=/tmp/node/bin:$PATH\n')
             os.utime(rc, (AFTER, AFTER))
             with patch('subprocess.run') as mock_run:
                 mock_run.return_value = MagicMock(returncode=1, stdout='')
@@ -40,7 +42,8 @@ class TestFindPersistenceArtifacts(unittest.TestCase):
     def test_systemd_unit_after_attack(self):
         with tempfile.TemporaryDirectory() as sdir:
             svc = os.path.join(sdir, 'evil.service')
-            open(svc, 'w').write('[Service]\nExecStart=node /tmp/payload.js\n')
+            with open(svc, 'w') as fh:
+                fh.write('[Service]\nExecStart=node /tmp/payload.js\n')
             os.utime(svc, (AFTER, AFTER))
             with patch('subprocess.run') as mock_run:
                 mock_run.return_value = MagicMock(returncode=1, stdout='')

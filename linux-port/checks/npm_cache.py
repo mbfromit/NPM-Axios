@@ -58,7 +58,7 @@ def scan_npm_cache():
                                 ver = json.load(f).get('version')
                         except Exception:
                             pass
-                    if ver is None or ver in VULN_VERSIONS:
+                    if ver in VULN_VERSIONS:
                         findings.append(Finding(
                             type='GlobalNpmHit', path=pkg_dir,
                             detail=f'{pkg}@{ver or "unknown"}', severity='Critical',
