@@ -5,7 +5,7 @@ function Invoke-NpmCacheScan {
     $findings = [System.Collections.Generic.List[PSCustomObject]]::new()
 
     if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        Write-Verbose 'npm not found — skipping cache scan'
+        Write-Verbose 'npm not found - skipping cache scan'
         return @($findings)
     }
 
@@ -32,7 +32,7 @@ function Invoke-NpmCacheScan {
                                     PackageName = $pkg
                                     Version     = $ver
                                     Severity    = 'High'
-                                    Description = "Malicious ${pkg}@${ver} found in npm cache index — run: npm cache clean --force"
+                                    Description = "Malicious ${pkg}@${ver} found in npm cache index - run: npm cache clean --force"
                                 })
                             }
                         }
@@ -61,9 +61,9 @@ function Invoke-NpmCacheScan {
                             Type        = 'GlobalNpmHit'
                             Path        = $globalPkgDir
                             PackageName = $pkg
-                            Version     = $ver ?? 'unknown'
+                            Version     = if ($ver) { $ver } else { 'unknown' }
                             Severity    = 'Critical'
-                            Description = "Malicious ${pkg} found in global npm — run: npm uninstall -g $pkg"
+                            Description = "Malicious ${pkg} found in global npm - run: npm uninstall -g $pkg"
                         })
                     }
                 }

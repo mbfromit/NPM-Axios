@@ -7,12 +7,14 @@ function Search-DroppedPayloads {
 
     # Default to the filesystem locations a dropper would target
     if (-not $ScanPaths) {
+        $localAppData = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $env:HOME }
+        $appData      = if ($env:APPDATA)      { $env:APPDATA }      else { Join-Path $env:HOME '.config' }
         $ScanPaths = @(
             $env:TEMP,
             $env:TMP,
-            (Join-Path ($env:LOCALAPPDATA ?? $env:HOME) 'Temp'),
-            ($env:LOCALAPPDATA ?? $env:HOME),
-            ($env:APPDATA      ?? (Join-Path $env:HOME '.config'))
+            (Join-Path $localAppData 'Temp'),
+            $localAppData,
+            $appData
         ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
     }
 

@@ -19,8 +19,8 @@ function Find-PersistenceArtifacts {
             $isNew = $taskDate -and $taskDate -ge $AttackWindowStart
 
             foreach ($action in $task.Actions) {
-                $exe  = $action.Execute ?? ''
-                $args = $action.Arguments ?? ''
+                $exe  = if ($action.Execute)   { $action.Execute }   else { '' }
+                $args = if ($action.Arguments) { $action.Arguments } else { '' }
                 $full = "$exe $args".ToLower()
 
                 $isSuspiciousPath   = $suspiciousPaths | Where-Object { $full -match $_ }

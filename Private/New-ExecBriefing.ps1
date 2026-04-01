@@ -22,7 +22,7 @@ function New-ExecBriefing {
             Name     = 'Project Discovery'
             What     = 'Node.js projects on disk'
             Examined = "$ProjectCount found"
-            Findings = $null      # informational only — never fails
+            Findings = $null      # informational only - never fails
             Pass     = $true
         }
         '2' = @{
@@ -95,7 +95,7 @@ function New-ExecBriefing {
     function Ln  { param([string]$s = '') [void]$sb.AppendLine($s) }
 
     HR
-    Ln 'AXIOS SUPPLY CHAIN ATTACK — EXECUTIVE SECURITY BRIEFING'
+    Ln 'AXIOS SUPPLY CHAIN ATTACK - EXECUTIVE SECURITY BRIEFING'
     Ln "Prepared : $($ScanMetadata.Timestamp)"
     Ln "Machine  : $($ScanMetadata.Hostname)   |   Analyst: $($ScanMetadata.Username)"
     HR
@@ -103,7 +103,7 @@ function New-ExecBriefing {
     Ln "  OVERALL VERDICT:  $verdictSymbol $verdictLabel"
     Ln
     if (-not $overallClean) {
-        Ln '  *** ACTION REQUIRED — See REQUIRED ACTIONS section below ***'
+        Ln '  *** ACTION REQUIRED - See REQUIRED ACTIONS section below ***'
         Ln
     }
 
@@ -117,7 +117,7 @@ function New-ExecBriefing {
     foreach ($entry in $checks.GetEnumerator()) {
         $c         = $entry.Value
         $status    = if ($c.Pass) { 'PASS' } else { 'FAIL' }
-        $findStr   = if ($null -eq $c.Findings) { '—' } elseif ($c.Findings -eq 0) { '0 hits' } else { "$($c.Findings) found" }
+        $findStr   = if ($null -eq $c.Findings) { '-' } elseif ($c.Findings -eq 0) { '0 hits' } else { "$($c.Findings) found" }
         Ln (' {0,-4} {1,-30} {2,-35} {3,-10} {4,-8} {5}' -f $entry.Key, $c.Name, $c.What, $c.Examined, $findStr, $status)
     }
 
@@ -143,7 +143,7 @@ function New-ExecBriefing {
         Ln
         Ln '  Failed checks:'
         foreach ($f in $failedChecks) {
-            Ln "    Check $($f.Key) — $($f.Value.Name)"
+            Ln "    Check $($f.Key) - $($f.Value.Name)"
         }
     }
 
@@ -163,7 +163,7 @@ function New-ExecBriefing {
         Ln '  2. Do not use this machine for any further work'
         Ln '  3. Notify the Security Incident Response team'
         Ln
-        Ln '  WITHIN 24 HOURS — rotate ALL credentials that exist on this machine:'
+        Ln '  WITHIN 24 HOURS - rotate ALL credentials that exist on this machine:'
         Ln '  - SSH private keys'
         Ln '  - GitHub / GitLab / Bitbucket personal access tokens'
         Ln '  - NPM publish tokens'

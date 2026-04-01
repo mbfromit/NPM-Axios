@@ -10,10 +10,10 @@ function Send-ScanReport {
         [bool]$UseTLS = $true
     )
     try {
-        $hn     = $env:COMPUTERNAME ?? $env:HOSTNAME ?? 'unknown'
+        $hn     = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
         $params = @{
             SmtpServer  = $SMTPServer; Port = $SMTPPort; From = $FromAddress; To = $ToAddress
-            Subject     = "Axios Compromise Scan — ${hn} — $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+            Subject     = "Axios Compromise Scan - ${hn} - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
             Body        = 'Axios NPM compromise scan report and executive briefing attached. Review immediately.'
             Attachments = $ReportPaths; UseSsl = $UseTLS; ErrorAction = 'Stop'
         }

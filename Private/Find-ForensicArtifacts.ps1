@@ -23,7 +23,7 @@ function Find-ForensicArtifacts {
                     Path        = $setupJs
                     Hash        = $hash
                     Severity    = if ($isKnown) { 'Critical' } else { 'High' }
-                    Description = if ($isKnown) { 'Known malicious setup.js (hash match)' } else { 'Suspicious setup.js in plain-crypto-js (hash mismatch — possible variant)' }
+                    Description = if ($isKnown) { 'Known malicious setup.js (hash match)' } else { 'Suspicious setup.js in plain-crypto-js (hash mismatch - possible variant)' }
                 })
             } catch { Write-Warning "Cannot hash ${setupJs}: $_" }
         }

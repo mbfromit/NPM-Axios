@@ -21,10 +21,12 @@ function Search-XorEncodedC2 {
     )
 
     if (-not $SearchPaths) {
+        $localAppData = if ($env:LOCALAPPDATA) { $env:LOCALAPPDATA } else { $env:HOME }
+        $appData      = if ($env:APPDATA)      { $env:APPDATA }      else { Join-Path $env:HOME '.config' }
         $SearchPaths = @(
             $env:TEMP, $env:TMP,
-            ($env:LOCALAPPDATA ?? $env:HOME),
-            ($env:APPDATA      ?? (Join-Path $env:HOME '.config'))
+            $localAppData,
+            $appData
         ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
     }
 

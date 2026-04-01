@@ -55,7 +55,7 @@ if ($SendEmail) {
 }
 
 $null = New-Item -ItemType Directory -Path $OutputPath -Force
-$hn   = $env:COMPUTERNAME ?? $env:HOSTNAME ?? 'unknown'
+$hn   = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
 $ts   = Get-Date -Format 'yyyyMMdd-HHmmss'
 $log  = Join-Path $OutputPath "Axios-Scan-${hn}-${ts}.log"
 
@@ -69,7 +69,7 @@ function Write-Log {
 $attackWindow = [datetime]::Parse('2026-03-31T00:21:00Z').ToLocalTime()
 $startTime    = Get-Date
 
-Write-Log "Axios Compromise Scanner — 10-check suite"
+Write-Log "Axios Compromise Scanner - 10-check suite"
 Write-Log "Attack window start: $attackWindow"
 Write-Log "Scanning paths: $($Path -join ', ')"
 
@@ -124,7 +124,7 @@ $duration = (Get-Date) - $startTime
 $metadata = @{
     Timestamp = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') UTC"
     Hostname  = $hn
-    Username  = $env:USERNAME ?? $env:USER ?? 'unknown'
+    Username  = if ($env:USERNAME) { $env:USERNAME } elseif ($env:USER) { $env:USER } else { 'unknown' }
     Duration  = "$([Math]::Round($duration.TotalSeconds,1))s"
     Paths     = $Path
 }
@@ -166,7 +166,7 @@ if ($SendEmail) {
     Write-Log "[10/10] Emailing report to $($ToAddress -join ', ')..."
     $sent = Send-ScanReport -ReportPaths @($briefingPath, $reportPath) -SMTPServer $SMTPServer -SMTPPort $SMTPPort `
         -FromAddress $FromAddress -ToAddress $ToAddress -Credential $Credential -UseTLS $UseTLS
-    if ($sent) { Write-Log 'Email sent.' } else { Write-Log 'Email failed — report available locally.' 'WARN' }
+    if ($sent) { Write-Log 'Email sent.' } else { Write-Log 'Email failed - report available locally.' 'WARN' }
 } else {
     Write-Log "[10/10] Email skipped (no -SendEmail flag)"
 }
@@ -177,7 +177,7 @@ $criticalCount  = @($artifacts + $cacheFindings + $droppedPayloads + $persistenc
 
 Write-Log ''
 Write-Log "═══════════════════════════════════════"
-Write-Log " SCAN COMPLETE — $(Get-Date -Format 'HH:mm:ss')"
+Write-Log " SCAN COMPLETE - $(Get-Date -Format 'HH:mm:ss')"
 Write-Log " Projects scanned    : $($projects.Count)"
 Write-Log " Vulnerable (lockfile): $vulnCount"
 Write-Log " Critical findings   : $criticalCount"
@@ -185,9 +185,9 @@ Write-Log " Technical report    : $reportPath"
 Write-Log " Executive briefing  : $briefingPath"
 
 if ($vulnCount -gt 0 -or $criticalCount -gt 0) {
-    Write-Log ' STATUS: COMPROMISED — isolate machine and review reports' 'WARN'
+    Write-Log ' STATUS: COMPROMISED - isolate machine and review reports' 'WARN'
     exit 1
 } else {
-    Write-Log ' STATUS: CLEAN — no compromise evidence found across all 10 checks'
+    Write-Log ' STATUS: CLEAN - no compromise evidence found across all 10 checks'
     exit 0
 }

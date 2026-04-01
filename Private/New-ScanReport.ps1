@@ -24,7 +24,7 @@ function New-ScanReport {
     function Add-Line    { param([string]$Line)  [void]$sb.AppendLine($Line) }
 
     [void]$sb.AppendLine('=' * 80)
-    [void]$sb.AppendLine('AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER — FORENSIC REPORT')
+    [void]$sb.AppendLine('AXIOS NPM SUPPLY CHAIN COMPROMISE SCANNER - FORENSIC REPORT')
     [void]$sb.AppendLine('=' * 80)
 
     Add-Section 'EXECUTIVE SUMMARY'
@@ -49,9 +49,9 @@ function New-ScanReport {
     if ($vulnProjects.Count -eq 0) { Add-Line 'None.' } else {
         foreach ($vp in $vulnProjects) {
             Add-Line "Project  : $($vp.ProjectPath)"
-            Add-Line "Lockfile : $($vp.LockfileType) — $($vp.LockfilePath)"
-            if ($vp.HasVulnerableAxios)      { Add-Line "FINDING  : axios@$($vp.VulnerableAxiosVersion) — malicious version" }
-            if ($vp.HasMaliciousPlainCrypto) { Add-Line "FINDING  : plain-crypto-js@4.2.1 — postinstall dropper" }
+            Add-Line "Lockfile : $($vp.LockfileType) - $($vp.LockfilePath)"
+            if ($vp.HasVulnerableAxios)      { Add-Line "FINDING  : axios@$($vp.VulnerableAxiosVersion) - malicious version" }
+            if ($vp.HasMaliciousPlainCrypto) { Add-Line "FINDING  : plain-crypto-js@4.2.1 - postinstall dropper" }
             Add-Line "FIX      : npm install axios@1.14.0 && npm cache clean --force && rm -rf node_modules && npm install"
             Add-Line ''
         }
@@ -125,17 +125,18 @@ function New-ScanReport {
     }
 
     Add-Section 'CREDENTIALS AT RISK'
-    Add-Line 'If COMPROMISED status — rotate ALL of the following immediately:'
+    Add-Line 'If COMPROMISED status - rotate ALL of the following immediately:'
+    $homeDir = if ($env:USERPROFILE) { $env:USERPROFILE } else { $env:HOME }
     $credPaths = @(
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.ssh'),
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.gitconfig'),
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.npmrc'),
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.aws/credentials'),
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.kube/config'),
-        (Join-Path ($env:USERPROFILE ?? $env:HOME) '.docker/config.json')
+        (Join-Path $homeDir '.ssh'),
+        (Join-Path $homeDir '.gitconfig'),
+        (Join-Path $homeDir '.npmrc'),
+        (Join-Path $homeDir '.aws/credentials'),
+        (Join-Path $homeDir '.kube/config'),
+        (Join-Path $homeDir '.docker/config.json')
     )
     foreach ($cp in $credPaths) {
-        $label = if (Test-Path $cp) { '  PRESENT — ROTATE:' } else { '  (not found):' }
+        $label = if (Test-Path $cp) { '  PRESENT - ROTATE:' } else { '  (not found):' }
         Add-Line "$label $cp"
     }
     Add-Line 'Also rotate: GitHub tokens, NPM tokens, AWS/GCP/Azure keys, container registry secrets, K8s service accounts'
@@ -145,15 +146,15 @@ function New-ScanReport {
     Add-Line 'setup.js SHA256    : e10b1fa84f1d6481625f741b69892780140d4e0e7769e7491e5f4d894c2e0e09'
     Add-Line 'C2 domain/IP/port  : sfrclak.com, 142.11.206.73:8000'
     Add-Line 'XOR key/constant   : OrDeR_7077 / 333 (0x4D mask)'
-    Add-Line 'Attack window      : 2026-03-31 00:21 UTC — 2026-03-31 03:15 UTC'
+    Add-Line 'Attack window      : 2026-03-31 00:21 UTC - 2026-03-31 03:15 UTC'
 
     Add-Section 'REMEDIATION GUIDANCE'
-    Add-Line 'STEP 1 — Lockfile cleanup:'
+    Add-Line 'STEP 1 - Lockfile cleanup:'
     Add-Line '  npm install axios@1.14.0   (or axios@0.30.3 for v0.x)'
     Add-Line '  npm cache clean --force'
     Add-Line '  Remove-Item node_modules -Recurse -Force && npm install'
     Add-Line ''
-    Add-Line 'STEP 2 — If dropped payloads or persistence found:'
+    Add-Line 'STEP 2 - If dropped payloads or persistence found:'
     Add-Line '  1. Isolate machine from network immediately'
     Add-Line '  2. Capture forensic disk image before any changes'
     Add-Line '  3. Remove scheduled tasks, registry run keys, startup entries found above'
@@ -162,14 +163,14 @@ function New-ScanReport {
     Add-Line '  6. Review network logs for traffic to sfrclak.com or 142.11.206.73:8000'
     Add-Line '  7. Consider full OS re-image if active connection was found'
     Add-Line ''
-    Add-Line 'STEP 3 — Credential rotation (mandatory if COMPROMISED):'
+    Add-Line 'STEP 3 - Credential rotation (mandatory if COMPROMISED):'
     Add-Line '  SSH keys, GitHub tokens, NPM tokens, AWS/GCP/Azure credentials,'
     Add-Line '  Kubernetes configs, container registry secrets, any secrets in .env files'
 
     # ── Write file ─────────────────────────────────────────────────────────────
     $null = New-Item -ItemType Directory -Path $OutputPath -Force
     $ts       = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $hn       = $env:COMPUTERNAME ?? $env:HOSTNAME ?? 'unknown'
+    $hn       = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
     $filePath = Join-Path $OutputPath "Axios-Scan-${hn}-${ts}.txt"
 
     $sb.ToString() | Set-Content -Path $filePath -Encoding UTF8

@@ -20,7 +20,7 @@ function Get-NetworkEvidence {
                 Type        = 'ActiveC2Connection'
                 Detail      = "$($conn.RemoteAddress):$($conn.RemotePort) State=$($conn.State) PID=$($conn.OwningProcess) Process=$procName"
                 Severity    = 'Critical'
-                Description = "ACTIVE connection to C2 endpoint $($conn.RemoteAddress):$($conn.RemotePort) — RAT likely running (process: $procName)"
+                Description = "ACTIVE connection to C2 endpoint $($conn.RemoteAddress):$($conn.RemotePort) - RAT likely running (process: $procName)"
             })
         }
     } catch { Write-Warning "TCP connection check failed: $_" }
@@ -33,7 +33,7 @@ function Get-NetworkEvidence {
                 Type        = 'DnsCacheHit'
                 Detail      = "DNS cache contains entry for $c2Domain"
                 Severity    = 'High'
-                Description = "$c2Domain found in DNS cache — machine resolved attacker domain (connection likely occurred)"
+                Description = "$c2Domain found in DNS cache - machine resolved attacker domain (connection likely occurred)"
             })
         }
     } catch { Write-Warning "DNS cache check failed: $_" }
@@ -47,9 +47,9 @@ function Get-NetworkEvidence {
                 $sample  = ($matches | Select-Object -First 3 | ForEach-Object { $_.Value }) -join '; '
                 $findings.Add([PSCustomObject]@{
                     Type        = 'FirewallLogHit'
-                    Detail      = "Firewall log contains connection records to $c2IP — sample: $sample"
+                    Detail      = "Firewall log contains connection records to $c2IP - sample: $sample"
                     Severity    = 'High'
-                    Description = "Windows Firewall log shows traffic to C2 IP $c2IP — machine communicated with attacker"
+                    Description = "Windows Firewall log shows traffic to C2 IP $c2IP - machine communicated with attacker"
                 })
             }
         } catch { Write-Warning "Firewall log scan failed: $_" }
