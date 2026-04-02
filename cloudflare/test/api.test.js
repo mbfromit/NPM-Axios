@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { handleSubmissions, handleStats, handleReport } from '../src/handlers/api.js'
+import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission } from '../src/handlers/api.js'
 
 const ADMIN_PW = 'admin-secret'
 
@@ -26,6 +26,13 @@ function makeEnv(overrides = {}) {
 
 function get(path, pw = ADMIN_PW) {
   return new Request('https://mbfromit.com' + path, {
+    headers: pw ? { 'X-Admin-Password': pw } : {}
+  })
+}
+
+function del(path, pw = ADMIN_PW) {
+  return new Request('https://mbfromit.com' + path, {
+    method: 'DELETE',
     headers: pw ? { 'X-Admin-Password': pw } : {}
   })
 }
@@ -235,5 +242,56 @@ describe('handleReport', () => {
     env.BUCKET.get = vi.fn(key => { capturedKey = key; return Promise.resolve({ text: async () => '<body></body>' }) })
     await handleReport(get('/ratcatcher/api/report/abc/full'), env, 'abc', 'full')
     expect(capturedKey).toBe('submissions/abc/report.html')
+  })
+})
+
+// ── DELETE /api/submissions/:id ─────────────────────────────────────────────
+
+describe('handleDeleteSubmission', () => {
+  it('returns 401 without admin password', async () => {
+    const env = makeEnv()
+    const res = await handleDeleteSubmission(del('/ratcatcher/api/submissions/abc', null), env, 'abc')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 404 when submission does not exist', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({ first: vi.fn().mockResolvedValue(null), run: vi.fn().mockResolvedValue({}) }))
+    }))
+    const res = await handleDeleteSubmission(del('/ratcatcher/api/submissions/nope'), env, 'nope')
+    expect(res.status).toBe(404)
+  })
+
+  it('deletes D1 row and R2 objects on success', async () => {
+    const env = makeEnv()
+    const runMock = vi.fn().mockResolvedValue({})
+    let queryIdx = 0
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'submissions/abc/brief.html', report_key: 'submissions/abc/report.html' }),
+        run: runMock
+      }))
+    }))
+    env.BUCKET = { delete: vi.fn().mockResolvedValue(undefined) }
+    const res = await handleDeleteSubmission(del('/ratcatcher/api/submissions/abc'), env, 'abc')
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.deleted).toBe('abc')
+    expect(runMock).toHaveBeenCalled()
+    expect(env.BUCKET.delete).toHaveBeenCalledTimes(2)
+  })
+
+  it('still succeeds if R2 cleanup fails', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn(() => ({
+        first: vi.fn().mockResolvedValue({ brief_key: 'b', report_key: 'r' }),
+        run: vi.fn().mockResolvedValue({})
+      }))
+    }))
+    env.BUCKET = { delete: vi.fn().mockRejectedValue(new Error('R2 down')) }
+    const res = await handleDeleteSubmission(del('/ratcatcher/api/submissions/abc'), env, 'abc')
+    expect(res.status).toBe(200)
   })
 })

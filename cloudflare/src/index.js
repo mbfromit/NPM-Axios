@@ -1,5 +1,5 @@
 import { handleSubmit }                                    from './handlers/submit.js'
-import { handleSubmissions, handleStats, handleReport }    from './handlers/api.js'
+import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission } from './handlers/api.js'
 import { handleDashboard }                                 from './handlers/dashboard.js'
 
 export default {
@@ -11,6 +11,11 @@ export default {
     if (path === '/ratcatcher/submit') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
       return handleSubmit(request, env)
+    }
+
+    const deleteMatch = path.match(/^\/ratcatcher\/api\/submissions\/([^/]+)$/)
+    if (deleteMatch && method === 'DELETE') {
+      return handleDeleteSubmission(request, env, deleteMatch[1])
     }
 
     if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 })

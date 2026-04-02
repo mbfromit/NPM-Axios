@@ -5,9 +5,10 @@ vi.mock('../src/handlers/submit.js', () => ({
   handleSubmit: vi.fn().mockResolvedValue(new Response('submit', { status: 201 }))
 }))
 vi.mock('../src/handlers/api.js', () => ({
-  handleSubmissions: vi.fn().mockResolvedValue(new Response('subs', { status: 200 })),
-  handleStats:       vi.fn().mockResolvedValue(new Response('stats', { status: 200 })),
-  handleReport:      vi.fn().mockResolvedValue(new Response('report', { status: 200 }))
+  handleSubmissions:      vi.fn().mockResolvedValue(new Response('subs', { status: 200 })),
+  handleStats:            vi.fn().mockResolvedValue(new Response('stats', { status: 200 })),
+  handleReport:           vi.fn().mockResolvedValue(new Response('report', { status: 200 })),
+  handleDeleteSubmission: vi.fn().mockResolvedValue(new Response('deleted', { status: 200 }))
 }))
 vi.mock('../src/handlers/dashboard.js', () => ({
   handleDashboard: vi.fn().mockResolvedValue(new Response('dash', { status: 200 }))
@@ -69,5 +70,12 @@ describe('Worker router', () => {
     const req = new Request('https://mbfromit.com/ratcatcher/submit', { method: 'GET' })
     const res = await worker.fetch(req, env, ctx)
     expect(res.status).toBe(405)
+  })
+
+  it('routes DELETE /ratcatcher/api/submissions/:id to handleDeleteSubmission', async () => {
+    const req = new Request('https://mbfromit.com/ratcatcher/api/submissions/abc-123', { method: 'DELETE' })
+    const res = await worker.fetch(req, env, ctx)
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('deleted')
   })
 })

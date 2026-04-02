@@ -81,6 +81,29 @@ export async function handleReport(request, env, id, type) {
   }
 }
 
+export async function handleDeleteSubmission(request, env, id) {
+  if (!checkAdminPassword(request, env)) return json({ error: 'Unauthorized' }, 401)
+
+  try {
+    const row = await env.DB.prepare(
+      'SELECT brief_key, report_key FROM submissions WHERE id = ?'
+    ).bind(id).first()
+
+    if (!row) return json({ error: 'Not found' }, 404)
+
+    await env.DB.prepare('DELETE FROM submissions WHERE id = ?').bind(id).run()
+
+    try {
+      await env.BUCKET.delete(row.brief_key)
+      await env.BUCKET.delete(row.report_key)
+    } catch { /* best-effort R2 cleanup */ }
+
+    return json({ deleted: id })
+  } catch {
+    return json({ error: 'Database error' }, 500)
+  }
+}
+
 function notFound() {
   return new Response(
     '<!DOCTYPE html><html><head><title>Not Found</title></head><body style="background:#0f0f0f;color:#ccc;font-family:monospace;padding:40px"><h2>Report no longer available</h2><p>This report has been removed or has expired.</p></body></html>',

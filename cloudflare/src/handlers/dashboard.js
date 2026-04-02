@@ -41,6 +41,12 @@ tr:hover td{background:#1a1a1a}
 .pbtn:disabled{opacity:0.3;cursor:default}
 .pginfo{color:#444;font-size:0.8rem}
 .empty{color:#444;text-align:center;padding:40px 0;font-size:0.85rem}
+.gear{background:none;border:1px solid #2a2a2a;color:#555;padding:4px 10px;cursor:pointer;font-size:0.85rem;font-family:monospace;margin-left:auto}
+.gear:hover{border-color:#555;color:#999}
+.gear.active{border-color:#ff4444;color:#ff4444}
+.dbtn{background:none;border:1px solid #4a1a1a;color:#ff4444;padding:3px 8px;cursor:pointer;font-family:monospace;font-size:0.72rem;display:none}
+.dbtn:hover{background:#4a1a1a;border-color:#ff4444}
+.admin-on .dbtn{display:inline-block}
 </style>
 </head>
 <body>
@@ -59,6 +65,7 @@ tr:hover td{background:#1a1a1a}
   <div class="hdr">
     <h1>RATCATCHER</h1>
     <span class="badge">Manager Dashboard</span>
+    <button class="gear" id="admtog" title="Admin Tools">&#9881; Admin</button>
   </div>
   <div class="stats">
     <div class="stat"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
@@ -110,7 +117,8 @@ async function loadRows(){
       tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+'</td><td>'+esc(s.username)+'</td>'
         +'<td>'+esc(s.duration||'—')+'</td>'
         +'<td class="vrd">'+(s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN')+'</td>'
-        +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button></td>';
+        +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
+        +' <button class="dbtn" onclick="del(&#39;'+esc(s.id)+'&#39;,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">Delete</button></td>';
       tb.appendChild(tr);
     });
   }
@@ -138,6 +146,16 @@ document.getElementById('lf').addEventListener('submit',async e=>{
   document.getElementById('lerr').textContent='';
   sessionStorage.setItem('rcpw',pw);
   await showDash();
+});
+async function del(id,host,user){
+  if(!confirm('Delete submission from '+host+' ('+user+')?\\n\\nThis will permanently remove the scan record and both reports.'))return;
+  const r=await fetch(B+'/api/submissions/'+id,{method:'DELETE',headers:{'X-Admin-Password':pw}});
+  if(!r.ok){alert('Delete failed ('+r.status+')');return;}
+  await Promise.all([loadStats(),loadRows()]);
+}
+document.getElementById('admtog').addEventListener('click',function(){
+  this.classList.toggle('active');
+  document.getElementById('dash').classList.toggle('admin-on');
 });
 document.getElementById('pp').addEventListener('click',()=>{pg--;loadRows()});
 document.getElementById('pn').addEventListener('click',()=>{pg++;loadRows()});
