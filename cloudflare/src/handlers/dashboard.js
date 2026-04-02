@@ -47,6 +47,9 @@ tr:hover td{background:#1a1a1a}
 .dbtn{background:none;border:1px solid #4a1a1a;color:#ff4444;padding:3px 8px;cursor:pointer;font-family:monospace;font-size:0.72rem;display:none}
 .dbtn:hover{background:#4a1a1a;border-color:#ff4444}
 .admin-on .dbtn{display:inline-block}
+.xbtn{background:none;border:1px solid #2a2a2a;color:#555;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-family:monospace;display:none}
+.xbtn:hover{border-color:#00ff41;color:#00ff41}
+.admin-on .xbtn{display:inline-block}
 </style>
 </head>
 <body>
@@ -83,6 +86,7 @@ tr:hover td{background:#1a1a1a}
     </table>
   </div>
   <div class="pager">
+    <button class="xbtn" id="csvbtn">&#8615; Export CSV</button>
     <button class="pbtn" id="pp" disabled>&larr; Prev</button>
     <span class="pginfo" id="pgi"></span>
     <button class="pbtn" id="pn" disabled>Next &rarr;</button>
@@ -91,6 +95,7 @@ tr:hover td{background:#1a1a1a}
 <script>
 const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null;
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}
 async function chkAuth(){
   if(!pw)return false;
@@ -116,7 +121,7 @@ async function loadRows(){
       tr.className=s.verdict==='COMPROMISED'?'comp':'clean';
       const dt=new Date(s.submitted_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'});
       tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+'</td><td>'+esc(s.username)+'</td>'
-        +'<td>'+esc(s.duration||'—')+'</td>'
+        +'<td>'+esc(fmtDur(s.duration))+'</td>'
         +'<td class="vrd">'+(s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN')+'</td>'
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
         +' <button class="dbtn" onclick="del(&#39;'+esc(s.id)+'&#39;,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">Delete</button></td>';
@@ -172,6 +177,13 @@ document.getElementById('admtog').addEventListener('click',function(){
   document.getElementById('dash').classList.toggle('admin-on');
 });
 document.getElementById('logout').addEventListener('click',logout);
+document.getElementById('csvbtn').addEventListener('click',async()=>{
+  const r=await api('/api/export');
+  if(!r.ok){alert('Export failed ('+r.status+')');return;}
+  const blob=await r.blob();
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='ratcatcher-export.csv';a.click();
+});
 document.getElementById('pp').addEventListener('click',()=>{pg--;loadRows()});
 document.getElementById('pn').addEventListener('click',()=>{pg++;loadRows()});
 pw=sessionStorage.getItem('rcpw')||'';

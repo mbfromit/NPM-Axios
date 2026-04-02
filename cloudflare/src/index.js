@@ -1,5 +1,5 @@
 import { handleSubmit }                                    from './handlers/submit.js'
-import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission } from './handlers/api.js'
+import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission, handleExport } from './handlers/api.js'
 import { handleDashboard }                                 from './handlers/dashboard.js'
 
 export default {
@@ -23,6 +23,7 @@ export default {
     if (path === '/ratcatcher/dashboard')        return handleDashboard(request, env)
     if (path === '/ratcatcher/api/submissions')  return handleSubmissions(request, env)
     if (path === '/ratcatcher/api/stats')        return handleStats(request, env)
+    if (path === '/ratcatcher/api/export')       return handleExport(request, env)
 
     const reportMatch = path.match(/^\/ratcatcher\/api\/report\/([^/]+)\/(brief|full)$/)
     if (reportMatch) return handleReport(request, env, reportMatch[1], reportMatch[2])

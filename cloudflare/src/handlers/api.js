@@ -104,6 +104,36 @@ export async function handleDeleteSubmission(request, env, id) {
   }
 }
 
+export async function handleExport(request, env) {
+  if (!checkAdminPassword(request, env)) return json({ error: 'Unauthorized' }, 401)
+
+  try {
+    const rows = await env.DB.prepare(`
+      SELECT hostname, username, submitted_at, verdict, duration,
+             projects_scanned, vulnerable_count, critical_count
+      FROM submissions
+      ORDER BY submitted_at DESC
+    `).all()
+
+    const header = 'Hostname,Username,Submitted,Verdict,Duration,Projects Scanned,Vulnerable Count,Critical Count'
+    const csvRows = (rows.results || []).map(r => {
+      const fields = [r.hostname, r.username, r.submitted_at, r.verdict, r.duration,
+                      r.projects_scanned, r.vulnerable_count, r.critical_count]
+      return fields.map(f => '"' + String(f ?? '').replace(/"/g, '""') + '"').join(',')
+    })
+    const csv = header + '\n' + csvRows.join('\n')
+
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="ratcatcher-export.csv"'
+      }
+    })
+  } catch {
+    return json({ error: 'Database error' }, 500)
+  }
+}
+
 function notFound() {
   return new Response(
     '<!DOCTYPE html><html><head><title>Not Found</title></head><body style="background:#0f0f0f;color:#ccc;font-family:monospace;padding:40px"><h2>Report no longer available</h2><p>This report has been removed or has expired.</p></body></html>',
