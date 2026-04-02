@@ -98,13 +98,16 @@ export async function handleReport(request, env, id, type) {
       ? html.replace(/(<body[^>]*>)/, '$1' + backBar)
       : backBar + html
 
+    const reportOrigin = new URL(request.url).origin
+    const reportPw = (request.headers.get('X-Admin-Password') || '').replace(/[\\'"]/g, '')
+
     if (type === 'brief') {
       const script = `<script>
 function _rcViewFull(){
   try{if(window.opener&&window.opener.vw){window.opener.vw('${safeId}','full');return}}catch(e){}
-  var pw=prompt('Admin password:','');
+  var pw='${reportPw}'||prompt('Admin password:','');
   if(!pw)return;
-  fetch('/ratcatcher/api/report/${safeId}/full',{headers:{'X-Admin-Password':pw}})
+  fetch('${reportOrigin}/ratcatcher/api/report/${safeId}/full',{headers:{'X-Admin-Password':pw}})
     .then(function(r){return r.ok?r.blob():Promise.reject(r.status)})
     .then(function(b){window.open(URL.createObjectURL(b),'_blank')})
     .catch(function(e){alert('Failed to load report ('+e+')')})
@@ -160,11 +163,10 @@ function _rcViewFull(){
 .rc-modal-save:hover{background:#2ea043}
 </style>`
 
-      // Inject ack script
+      // Inject ack script — use absolute URL so it works from blob: origins
       const ackScript = `<script>
 (function(){
-  var SUB='${safeId}',B='/ratcatcher',PW='';
-  try{PW=window.opener&&window.opener.pw||'';}catch(e){}
+  var SUB='${safeId}',B='${reportOrigin}/ratcatcher',PW='${reportPw}';
 
   function getHeaders(){return{'X-Admin-Password':PW,'Content-Type':'application/json'}}
 
@@ -218,7 +220,8 @@ function _rcViewFull(){
         document.getElementById('rc-m-err').textContent=res.body.error||'Save failed.';
       }
     })
-    .catch(function(){
+    .catch(function(err){
+      console.error('[RatCatcher ack]',err);
       document.getElementById('rc-m-save').disabled=false;
       document.getElementById('rc-m-save').textContent='Save Acknowledgement';
       document.getElementById('rc-m-err').textContent='Network error — please try again.';
