@@ -66,7 +66,14 @@ export async function handleReport(request, env, id, type) {
     const obj = await env.BUCKET.get(key)
     if (!obj) return notFound()
 
-    const html = await obj.text()
+    let html = await obj.text()
+
+    const backBar = `<div style="position:sticky;top:0;z-index:9999;background:#1a1a1a;border-bottom:1px solid #333;padding:8px 20px;font-family:'Courier New',monospace;display:flex;align-items:center;gap:12px">` +
+      `<button onclick="window.close()" style="background:#00ff41;color:#0f0f0f;border:none;padding:5px 14px;font-family:monospace;font-size:0.82rem;font-weight:bold;cursor:pointer;letter-spacing:1px">&larr; BACK TO DASHBOARD</button>` +
+      `<span style="color:#555;font-size:0.75rem">${type === 'brief' ? 'EXECUTIVE BRIEFING' : 'TECHNICAL REPORT'}</span></div>`
+    html = html.includes('<body')
+      ? html.replace(/(<body[^>]*>)/, '$1' + backBar)
+      : backBar + html
 
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
   } catch {

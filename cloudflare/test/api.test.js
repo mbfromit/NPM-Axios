@@ -190,7 +190,7 @@ describe('handleReport', () => {
     expect(html).toContain('no longer available')
   })
 
-  it('serves brief HTML unmodified', async () => {
+  it('serves brief HTML with back bar and EXECUTIVE BRIEFING label', async () => {
     const env = makeEnv()
     const briefHtml = '<html><body><h1>Brief</h1></body></html>'
     env.DB.prepare = vi.fn(() => ({
@@ -202,10 +202,12 @@ describe('handleReport', () => {
     const res = await handleReport(get('/ratcatcher/api/report/abc/brief'), env, 'abc', 'brief')
     expect(res.status).toBe(200)
     const html = await res.text()
-    expect(html).toBe(briefHtml)
+    expect(html).toContain('BACK TO DASHBOARD')
+    expect(html).toContain('EXECUTIVE BRIEFING')
+    expect(html).toContain('<h1>Brief</h1>')
   })
 
-  it('serves full report HTML unmodified', async () => {
+  it('serves full report HTML with back bar and TECHNICAL REPORT label', async () => {
     const env = makeEnv()
     const reportHtml = '<html><body><h1>Full Report</h1></body></html>'
     env.DB.prepare = vi.fn(() => ({
@@ -217,7 +219,9 @@ describe('handleReport', () => {
     const res = await handleReport(get('/ratcatcher/api/report/abc/full'), env, 'abc', 'full')
     expect(res.status).toBe(200)
     const html = await res.text()
-    expect(html).toBe(reportHtml)
+    expect(html).toContain('BACK TO DASHBOARD')
+    expect(html).toContain('TECHNICAL REPORT')
+    expect(html).toContain('<h1>Full Report</h1>')
   })
 
   it('fetches brief_key for brief type and report_key for full type', async () => {
