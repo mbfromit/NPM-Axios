@@ -59,6 +59,8 @@ tr:hover td{background:#1a1a1a}
 .search .clr:hover{border-color:#555;color:#999}
 .latest{color:#00ff41;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
 .reviewed{color:#3fb950;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
+.stat.rvw .val{color:#3fb950}
+.stat.nrvw .val{color:#f0883e}
 </style>
 </head>
 <body>
@@ -84,6 +86,8 @@ tr:hover td{background:#1a1a1a}
     <div class="stat selected" id="f-all"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
     <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
     <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
+    <div class="stat rvw" id="f-reviewed"><div class="lbl">Reviewed</div><div class="val" id="s-reviewed">-</div></div>
+    <div class="stat nrvw" id="f-notrev"><div class="lbl">Not Reviewed</div><div class="val" id="s-notrev">-</div></div>
   </div>
   <div class="search">
     <input type="text" id="srch" placeholder="Search hostname or username...">
@@ -106,7 +110,7 @@ tr:hover td{background:#1a1a1a}
   </div>
 </div>
 <script>
-const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null,vfilter='',srchQ='';
+const B='/ratcatcher',L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}
@@ -121,9 +125,11 @@ async function loadStats(){
   document.getElementById('s-total').textContent=d.total.toLocaleString();
   document.getElementById('s-clean').textContent=d.clean.toLocaleString();
   document.getElementById('s-comp').textContent=d.compromised.toLocaleString();
+  document.getElementById('s-reviewed').textContent=d.reviewed.toLocaleString();
+  document.getElementById('s-notrev').textContent=d.compromised.toLocaleString();
 }
 async function loadRows(){
-  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();
+  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(rfilter!==''?'&reviewed='+rfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();
   const tb=document.getElementById('tb');
   tb.innerHTML='';
   if(!d.submissions||!d.submissions.length){
@@ -190,15 +196,19 @@ document.getElementById('admtog').addEventListener('click',function(){
   this.classList.toggle('active');
   document.getElementById('dash').classList.toggle('admin-on');
 });
-function setFilter(v){
-  vfilter=v;pg=1;
+function setFilter(v,rv){
+  vfilter=v;rfilter=rv??'';pg=1;
   document.querySelectorAll('.stat').forEach(el=>el.classList.remove('selected'));
-  document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
+  if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
+  else if(rv==='0')document.getElementById('f-notrev').classList.add('selected');
+  else document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
   loadRows();
 }
-document.getElementById('f-all').addEventListener('click',()=>setFilter(''));
-document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN'));
-document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED'));
+document.getElementById('f-all').addEventListener('click',()=>setFilter('',''));
+document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN',''));
+document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED',''));
+document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1'));
+document.getElementById('f-notrev').addEventListener('click',()=>setFilter('COMPROMISED','0'));
 let srchTimer=null;
 document.getElementById('srch').addEventListener('input',function(){
   clearTimeout(srchTimer);

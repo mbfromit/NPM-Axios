@@ -11,12 +11,19 @@ export async function handleSubmissions(request, env) {
   const validVerdicts = ['CLEAN', 'COMPROMISED']
   const filterVerdict = validVerdicts.includes(verdict) ? verdict : null
   const search = (url.searchParams.get('search') || '').trim()
+  const reviewed = url.searchParams.get('reviewed')
+  const filterReviewed = reviewed === '1' || reviewed === '0' ? reviewed : null
 
   try {
     const conditions = []
     const binds = []
     if (filterVerdict) { conditions.push('verdict = ?'); binds.push(filterVerdict) }
     if (search) { conditions.push('(hostname LIKE ? OR username LIKE ?)'); binds.push('%'+search+'%', '%'+search+'%') }
+    if (filterReviewed === '1') {
+      conditions.push('findings_count > 0 AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) >= findings_count')
+    } else if (filterReviewed === '0') {
+      conditions.push('(findings_count IS NULL OR findings_count = 0 OR (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) < findings_count)')
+    }
     const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : ''
 
     const countStmt = env.DB.prepare('SELECT COUNT(*) AS total FROM submissions' + where)
@@ -57,15 +64,24 @@ export async function handleStats(request, env) {
     const row = await env.DB.prepare(`
       SELECT
         COUNT(*) AS total,
-        SUM(CASE WHEN verdict = 'CLEAN'       THEN 1 ELSE 0 END) AS clean,
-        SUM(CASE WHEN verdict = 'COMPROMISED' THEN 1 ELSE 0 END) AS compromised
-      FROM submissions
+        SUM(CASE WHEN verdict = 'CLEAN' THEN 1 ELSE 0 END) AS clean,
+        SUM(CASE WHEN verdict = 'COMPROMISED'
+              AND (s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count)
+             THEN 1 ELSE 0 END) AS reviewed,
+        SUM(CASE WHEN verdict = 'COMPROMISED'
+              AND NOT (s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count)
+             THEN 1 ELSE 0 END) AS compromised
+      FROM submissions s
+      LEFT JOIN (
+        SELECT submission_id, COUNT(*) AS ack_count FROM finding_acknowledgements GROUP BY submission_id
+      ) ac ON s.id = ac.submission_id
     `).first()
 
     return json({
       total:       row?.total       ?? 0,
       clean:       row?.clean       ?? 0,
-      compromised: row?.compromised ?? 0
+      compromised: row?.compromised ?? 0,
+      reviewed:    row?.reviewed    ?? 0
     })
   } catch {
     return json({ error: 'Database error' }, 500)
