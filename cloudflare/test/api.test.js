@@ -127,6 +127,75 @@ describe('handleSubmissions', () => {
     const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
     expect(res.status).toBe(500)
   })
+
+  it('reviewed is 0 when findings_count is null (scan never had full report opened)', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 1 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn(() => ({
+          all: vi.fn().mockResolvedValue({
+            results: [
+              { id: 'b', hostname: 'H2', username: 'u2', submitted_at: '2026-04-01T12:00:00Z',
+                verdict: 'CLEAN', duration: '5s', projects_scanned: 1,
+                vulnerable_count: 0, critical_count: 0,
+                findings_count: null, ack_count: 0, reviewed: 0 }
+            ]
+          })
+        }))
+      })
+
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.submissions[0].reviewed).toBe(0)
+  })
+
+  it('reviewed is 0 when ack_count < findings_count (partial acknowledgement)', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 1 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn(() => ({
+          all: vi.fn().mockResolvedValue({
+            results: [
+              { id: 'c', hostname: 'H3', username: 'u3', submitted_at: '2026-04-01T12:00:00Z',
+                verdict: 'COMPROMISED', duration: '8s', projects_scanned: 2,
+                vulnerable_count: 3, critical_count: 1,
+                findings_count: 5, ack_count: 2, reviewed: 0 }
+            ]
+          })
+        }))
+      })
+
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.submissions[0].reviewed).toBe(0)
+  })
+
+  it('reviewed is 1 when ack_count >= findings_count > 0 (fully reviewed)', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 1 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn(() => ({
+          all: vi.fn().mockResolvedValue({
+            results: [
+              { id: 'd', hostname: 'H4', username: 'u4', submitted_at: '2026-04-01T12:00:00Z',
+                verdict: 'COMPROMISED', duration: '12s', projects_scanned: 4,
+                vulnerable_count: 2, critical_count: 0,
+                findings_count: 3, ack_count: 3, reviewed: 1 }
+            ]
+          })
+        }))
+      })
+
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.submissions[0].reviewed).toBe(1)
+  })
 })
 
 // ── /api/stats ──────────────────────────────────────────────────────────────
