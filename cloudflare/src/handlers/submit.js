@@ -8,7 +8,7 @@ export async function handleSubmit(request, env) {
   if (unquotedCt !== ct) {
     const headers = new Headers(request.headers)
     headers.set('content-type', unquotedCt)
-    request = new Request(request.url, { method: request.method, headers, body: request.body, duplex: 'half' })
+    request = new Request(request, { headers })
   }
 
   let formData
