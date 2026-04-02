@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { handleGetAcks, handlePostAck } from '../src/handlers/ack.js'
 
 const ADMIN_PW = 'test-pw'
