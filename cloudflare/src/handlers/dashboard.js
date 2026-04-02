@@ -52,6 +52,12 @@ tr:hover td{background:#1a1a1a}
 .xbtn{background:none;border:1px solid #2a2a2a;color:#555;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-family:monospace;display:none}
 .xbtn:hover{border-color:#00ff41;color:#00ff41}
 .admin-on .xbtn{display:inline-block}
+.search{display:flex;gap:10px;margin-bottom:16px;align-items:center}
+.search input{background:#0a0a0a;border:1px solid #333;color:#e0e0e0;font-family:monospace;font-size:0.82rem;padding:6px 12px;width:260px}
+.search input:focus{outline:none;border-color:#00ff41}
+.search .clr{background:none;border:1px solid #2a2a2a;color:#555;padding:4px 10px;cursor:pointer;font-family:monospace;font-size:0.78rem}
+.search .clr:hover{border-color:#555;color:#999}
+.latest{color:#00ff41;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
 </style>
 </head>
 <body>
@@ -78,6 +84,10 @@ tr:hover td{background:#1a1a1a}
     <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
     <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
   </div>
+  <div class="search">
+    <input type="text" id="srch" placeholder="Search hostname or username...">
+    <button class="clr" id="srchclr">Clear</button>
+  </div>
   <div class="tblw">
     <table>
       <thead><tr>
@@ -95,7 +105,7 @@ tr:hover td{background:#1a1a1a}
   </div>
 </div>
 <script>
-const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null,vfilter='';
+const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null,vfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}
@@ -112,7 +122,7 @@ async function loadStats(){
   document.getElementById('s-comp').textContent=d.compromised.toLocaleString();
 }
 async function loadRows(){
-  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')),d=await r.json();
+  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();
   const tb=document.getElementById('tb');
   tb.innerHTML='';
   if(!d.submissions||!d.submissions.length){
@@ -122,7 +132,8 @@ async function loadRows(){
       const tr=document.createElement('tr');
       tr.className=s.verdict==='COMPROMISED'?'comp':'clean';
       const dt=new Date(s.submitted_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'});
-      tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+'</td><td>'+esc(s.username)+'</td>'
+      const ltag=s.is_latest?'<span class="latest">LATEST</span>':'';
+      tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+ltag+'</td><td>'+esc(s.username)+'</td>'
         +'<td>'+esc(fmtDur(s.duration))+'</td>'
         +'<td class="vrd">'+(s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN')+'</td>'
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
@@ -187,6 +198,14 @@ function setFilter(v){
 document.getElementById('f-all').addEventListener('click',()=>setFilter(''));
 document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN'));
 document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED'));
+let srchTimer=null;
+document.getElementById('srch').addEventListener('input',function(){
+  clearTimeout(srchTimer);
+  srchTimer=setTimeout(()=>{srchQ=this.value.trim();pg=1;loadRows()},300);
+});
+document.getElementById('srchclr').addEventListener('click',()=>{
+  document.getElementById('srch').value='';srchQ='';pg=1;loadRows();
+});
 document.getElementById('logout').addEventListener('click',logout);
 document.getElementById('csvbtn').addEventListener('click',async()=>{
   const r=await api('/api/export');

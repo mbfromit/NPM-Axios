@@ -10,24 +10,33 @@ export async function handleSubmissions(request, env) {
   const verdict = url.searchParams.get('verdict')
   const validVerdicts = ['CLEAN', 'COMPROMISED']
   const filterVerdict = validVerdicts.includes(verdict) ? verdict : null
+  const search = (url.searchParams.get('search') || '').trim()
 
   try {
-    const where = filterVerdict ? ' WHERE verdict = ?' : ''
+    const conditions = []
+    const binds = []
+    if (filterVerdict) { conditions.push('verdict = ?'); binds.push(filterVerdict) }
+    if (search) { conditions.push('(hostname LIKE ? OR username LIKE ?)'); binds.push('%'+search+'%', '%'+search+'%') }
+    const where = conditions.length ? ' WHERE ' + conditions.join(' AND ') : ''
+
     const countStmt = env.DB.prepare('SELECT COUNT(*) AS total FROM submissions' + where)
-    const countRow = await (filterVerdict ? countStmt.bind(filterVerdict) : countStmt).first()
+    const countRow = await (binds.length ? countStmt.bind(...binds) : countStmt).first()
     const total = countRow?.total ?? 0
 
     const rowsStmt = env.DB.prepare(`
-      SELECT id, hostname, username, submitted_at, verdict, duration,
-             projects_scanned, vulnerable_count, critical_count
-      FROM submissions${where}
-      ORDER BY submitted_at DESC
-      LIMIT ? OFFSET ?
+      SELECT s.*, CASE WHEN s.submitted_at = latest.max_at THEN 1 ELSE 0 END AS is_latest
+      FROM (
+        SELECT id, hostname, username, submitted_at, verdict, duration,
+               projects_scanned, vulnerable_count, critical_count
+        FROM submissions${where}
+        ORDER BY submitted_at DESC
+        LIMIT ? OFFSET ?
+      ) s
+      LEFT JOIN (
+        SELECT hostname, MAX(submitted_at) AS max_at FROM submissions GROUP BY hostname
+      ) latest ON s.hostname = latest.hostname
     `)
-    const rows = await (filterVerdict
-      ? rowsStmt.bind(filterVerdict, limit, offset)
-      : rowsStmt.bind(limit, offset)
-    ).all()
+    const rows = await rowsStmt.bind(...binds, limit, offset).all()
 
     return json({ total, page, limit, submissions: rows.results })
   } catch {
