@@ -19,6 +19,8 @@ function Find-PersistenceArtifacts {
             $isNew = $taskDate -and $taskDate -ge $AttackWindowStart
 
             foreach ($action in $task.Actions) {
+                # Only ExecAction objects carry Execute/Arguments; skip COM-handler, email, etc.
+                if ($action.PSObject.Properties['Execute'] -eq $null) { continue }
                 $exe  = if ($action.Execute)   { $action.Execute }   else { '' }
                 $args = if ($action.Arguments) { $action.Arguments } else { '' }
                 $full = "$exe $args".ToLower()
