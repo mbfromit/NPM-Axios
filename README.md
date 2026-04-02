@@ -71,9 +71,7 @@ The script will display the exact folders it intends to scan and ask for confirm
 
 Before the scan begins, you will be prompted to enter a **submission password**. This password is required — the scan will not run without it. Contact your **manager** or the **DevOps team** to obtain the password.
 
-The password authorises your scan results to be submitted to the RatCatcher dashboard so the security team can track remediation progress across the organisation.
-
-Reports are always saved locally to `C:\Logs` (or `-OutputPath`) in addition to being submitted.
+Reports are always saved locally to `C:\Logs` (or `-OutputPath`).
 
 ---
 
