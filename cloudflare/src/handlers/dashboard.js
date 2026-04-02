@@ -121,12 +121,14 @@ async function chkAuth(){
   pw='';sessionStorage.removeItem('rcpw');return false;
 }
 async function loadStats(){
-  const r=await api('/api/stats'),d=await r.json();
-  document.getElementById('s-total').textContent=d.total.toLocaleString();
-  document.getElementById('s-clean').textContent=d.clean.toLocaleString();
-  document.getElementById('s-comp').textContent=d.compromised.toLocaleString();
-  document.getElementById('s-reviewed').textContent=d.reviewed.toLocaleString();
-  document.getElementById('s-notrev').textContent=d.compromised.toLocaleString();
+  try{
+    const r=await api('/api/stats'),d=await r.json();
+    document.getElementById('s-total').textContent=(d.total??0).toLocaleString();
+    document.getElementById('s-clean').textContent=(d.clean??0).toLocaleString();
+    document.getElementById('s-comp').textContent=(d.compromised??0).toLocaleString();
+    document.getElementById('s-reviewed').textContent=(d.reviewed??0).toLocaleString();
+    document.getElementById('s-notrev').textContent=(d.compromised??0).toLocaleString();
+  }catch(e){console.error('loadStats',e)}
 }
 async function loadRows(){
   const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(rfilter!==''?'&reviewed='+rfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();

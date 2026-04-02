@@ -66,10 +66,12 @@ export async function handleStats(request, env) {
         COUNT(*) AS total,
         SUM(CASE WHEN verdict = 'CLEAN' THEN 1 ELSE 0 END) AS clean,
         SUM(CASE WHEN verdict = 'COMPROMISED'
-              AND (s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count)
+              AND s.findings_count > 0
+              AND COALESCE(ac.ack_count, 0) >= s.findings_count
              THEN 1 ELSE 0 END) AS reviewed,
         SUM(CASE WHEN verdict = 'COMPROMISED'
-              AND NOT (s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count)
+              AND (s.findings_count IS NULL OR s.findings_count = 0
+                   OR COALESCE(ac.ack_count, 0) < s.findings_count)
              THEN 1 ELSE 0 END) AS compromised
       FROM submissions s
       LEFT JOIN (
