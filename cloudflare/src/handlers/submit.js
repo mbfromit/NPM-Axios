@@ -2,13 +2,15 @@ import { json } from '../util.js'
 
 export async function handleSubmit(request, env) {
   // PowerShell's Invoke-RestMethod sends a quoted boundary (boundary="xxx") which
-  // Cloudflare Workers' formData() cannot parse. Strip the quotes if present.
+  // Cloudflare Workers' formData() cannot parse. When detected, buffer the entire
+  // body into an ArrayBuffer and reconstruct the request with an unquoted boundary.
   const ct = request.headers.get('content-type') || ''
   const unquotedCt = ct.replace(/boundary="([^"]+)"/, 'boundary=$1')
   if (unquotedCt !== ct) {
+    const body = await request.arrayBuffer()
     const headers = new Headers(request.headers)
     headers.set('content-type', unquotedCt)
-    request = new Request(request, { headers })
+    request = new Request(request.url, { method: 'POST', headers, body })
   }
 
   let formData
