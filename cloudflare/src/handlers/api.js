@@ -124,9 +124,12 @@ export async function handleReport(request, env, id, type) {
     let html = await obj.text()
     const safeId = id.replace(/[^a-zA-Z0-9\-_]/g, '')
 
+    const bulkBtn = type === 'full'
+      ? `<button id="rc-bulk-ack" style="background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:5px 14px;font-family:monospace;font-size:0.82rem;cursor:pointer;letter-spacing:1px;margin-left:auto">&#9745; BULK ACKNOWLEDGE</button>`
+      : ''
     const backBar = `<div style="position:sticky;top:0;z-index:9999;background:#1a1a1a;border-bottom:1px solid #333;padding:8px 20px;font-family:'Courier New',monospace;display:flex;align-items:center;gap:12px">` +
       `<button onclick="window.close()" style="background:#00ff41;color:#0f0f0f;border:none;padding:5px 14px;font-family:monospace;font-size:0.82rem;font-weight:bold;cursor:pointer;letter-spacing:1px">&larr; BACK TO DASHBOARD</button>` +
-      `<span style="color:#555;font-size:0.75rem">${type === 'brief' ? 'EXECUTIVE BRIEFING' : 'TECHNICAL REPORT'}</span></div>`
+      `<span style="color:#555;font-size:0.75rem">${type === 'brief' ? 'EXECUTIVE BRIEFING' : 'TECHNICAL REPORT'}</span>${bulkBtn}</div>`
     html = html.includes('<body')
       ? html.replace(/(<body[^>]*>)/, '$1' + backBar)
       : backBar + html
@@ -200,6 +203,10 @@ function _rcViewFull(){
 .rc-modal-cancel:hover{border-color:#555;color:#ccc}
 .rc-modal-save{background:#238636;border:1px solid #2ea043;color:#fff;font-weight:bold}
 .rc-modal-save:hover{background:#2ea043}
+.rc-modal.bulk h3{color:#58a6ff}
+.rc-modal.bulk .rc-modal-save{background:#1f6feb;border-color:#388bfd}
+.rc-modal.bulk .rc-modal-save:hover{background:#388bfd}
+.rc-bulk-progress{font-size:11px;color:#8b949e;font-family:'Consolas',monospace;margin-top:8px;min-height:16px}
 .rc-modal.threat h3{color:#f85149}
 .rc-modal.threat .rc-modal-save{background:#da3633;border-color:#f85149}
 .rc-modal.threat .rc-modal-save:hover{background:#f85149}
@@ -297,6 +304,85 @@ function _rcViewFull(){
   }
 
   function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+  // Bulk acknowledge
+  function getUnackedFindings(){
+    var findings=document.querySelectorAll('.finding');
+    var unacked=[];
+    var seen=new Set();
+    for(var i=0;i<findings.length;i++){
+      var el=findings[i];
+      if(el.querySelector('.rc-ack-done'))continue;
+      var hash=el.dataset.fhash;
+      if(!hash||seen.has(hash))continue;
+      seen.add(hash);
+      unacked.push({hash:hash,el:el});
+    }
+    return unacked;
+  }
+
+  function openBulkModal(){
+    var unacked=getUnackedFindings();
+    if(!unacked.length){alert('All findings are already acknowledged.');return;}
+    var dlg=document.getElementById('rc-m-dialog');
+    dlg.className='rc-modal bulk';
+    document.getElementById('rc-m-title').textContent='BULK ACKNOWLEDGE ('+unacked.length+' findings)';
+    document.getElementById('rc-m-path').textContent='';
+    document.getElementById('rc-m-desc').textContent='Enter one reason that applies to all '+unacked.length+' un-acknowledged findings. This will acknowledge them all at once.';
+    document.getElementById('rc-m-save').textContent='Acknowledge All ('+unacked.length+')';
+    document.getElementById('rc-m-save').onclick=function(){bulkSave(unacked)};
+    document.getElementById('rc-m-reason').placeholder='e.g. None of these findings are related to the Axios supply-chain attack per MS Copilot analysis. Reviewed by mberry 2026-04-02.';
+    document.getElementById('rc-m-reason').value='';
+    document.getElementById('rc-m-err').textContent='';
+    overlay.classList.add('open');
+    setTimeout(function(){document.getElementById('rc-m-reason').focus()},50);
+  }
+
+  function bulkSave(unacked){
+    var reason=document.getElementById('rc-m-reason').value.trim();
+    if(!reason){document.getElementById('rc-m-err').textContent='Reason is required.';return;}
+    var saveBtn=document.getElementById('rc-m-save');
+    saveBtn.disabled=true;
+    var done=0,failed=0,total=unacked.length;
+    document.getElementById('rc-m-err').textContent='';
+    saveBtn.textContent='Saving... 0/'+total;
+
+    var chain=Promise.resolve();
+    unacked.forEach(function(item){
+      chain=chain.then(function(){
+        return fetch(B+'/api/submissions/'+SUB+'/acks',{
+          method:'POST',
+          headers:getHeaders(),
+          body:JSON.stringify({finding_hash:item.hash,reason:reason,is_threat:false})
+        })
+        .then(function(r){return r.json().then(function(b){return{status:r.status,body:b}})})
+        .then(function(res){
+          if(res.status===200||res.status===201||res.status===409){
+            done++;
+            markDone(item.el,reason,res.body.acknowledged_at||new Date().toISOString(),false);
+          } else { failed++; }
+          saveBtn.textContent='Saving... '+done+'/'+total;
+        })
+        .catch(function(){failed++});
+      });
+    });
+
+    chain.then(function(){
+      saveBtn.disabled=false;
+      saveBtn.textContent='Acknowledge All';
+      document.getElementById('rc-m-save').onclick=saveAck;
+      if(failed===0){
+        overlay.classList.remove('open');
+      } else {
+        document.getElementById('rc-m-err').textContent=failed+' of '+total+' failed. Try again for the remaining.';
+      }
+    });
+  }
+
+  // Wire up bulk button
+  var bulkBtn=document.getElementById('rc-bulk-ack');
+  if(bulkBtn)bulkBtn.onclick=openBulkModal;
+
 
   async function hashFinding(type,path){
     var text=type+'|'+path;
