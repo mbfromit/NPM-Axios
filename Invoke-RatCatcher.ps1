@@ -29,6 +29,7 @@ param(
     [string[]]$ToAddress,
     [PSCredential]$Credential,
     [bool]$UseTLS           = $true,
+    [switch]$NoSubmit,
     [int]$Threads           = 4,
     # Test-artifact overrides — point at synthetic data without touching real npm cache or firewall log
     [string]$TestCacheDir,
@@ -51,6 +52,7 @@ $pvt = Join-Path $PSScriptRoot 'Private'
 . (Join-Path $pvt 'New-ExecBriefing.ps1')
 . (Join-Path $pvt 'New-ScanLogHtml.ps1')
 . (Join-Path $pvt 'Send-ScanReport.ps1')
+. (Join-Path $pvt 'Submit-ScanToApi.ps1')
 
 # Load logo for HTML reports (resize to ~600px to keep embedded size reasonable)
 $logoBase64 = ''
@@ -235,6 +237,35 @@ if ($SendEmail) {
 # ── Summary ───────────────────────────────────────────────────────────────────
 $vulnCount      = @($lockfileResults | Where-Object { $_.HasVulnerableAxios -or $_.HasMaliciousPlainCrypto }).Count
 $criticalCount  = @($artifacts + $cacheFindings + $droppedPayloads + $persistenceArtifacts + $xorFindings + $networkEvidence | Where-Object { $_.Severity -eq 'Critical' }).Count
+
+# ── Submit to dashboard (unless -NoSubmit) ────────────────────────────────────
+if (-not $NoSubmit) {
+    Write-Log ''
+    $submitPassword = Read-Host '  Enter RatCatcher submission password (press Enter to skip)'
+    $submitVerdict  = if ($vulnCount -gt 0 -or $criticalCount -gt 0) { 'COMPROMISED' } else { 'CLEAN' }
+
+    $submitResult = Submit-ScanToApi `
+        -ApiUrl          'https://mbfromit.com/ratcatcher/submit' `
+        -Password        $submitPassword `
+        -Hostname        $hn `
+        -Username        $metadata.Username `
+        -ScanTimestamp   $metadata.Timestamp `
+        -Duration        $metadata.Duration `
+        -Verdict         $submitVerdict `
+        -ProjectsScanned $projects.Count `
+        -VulnerableCount $vulnCount `
+        -CriticalCount   $criticalCount `
+        -PathsScanned    ($resolvedPaths | ConvertTo-Json -Compress) `
+        -BriefPath       $briefingPath `
+        -ReportPath      $reportPath
+
+    switch ($submitResult.Status) {
+        'skipped'        { Write-Log '[WARN] Submission skipped' 'WARN' }
+        'success'        { Write-Log "[INFO] Scan submitted successfully (ID: $($submitResult.Id))" }
+        'wrong-password' { Write-Log 'Submission password incorrect — report not submitted' 'WARN' }
+        'error'          { Write-Log "Submission failed: $($submitResult.Message)" 'WARN' }
+    }
+}
 
 Write-Log ''
 Write-Log "═══════════════════════════════════════"
