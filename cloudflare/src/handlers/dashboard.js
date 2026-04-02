@@ -21,7 +21,9 @@ input[type=password]:focus{outline:none;border-color:#00ff41}
 .hdr h1{color:#00ff41;font-size:1.1rem;letter-spacing:2px}
 .hdr .badge{color:#444;font-size:0.78rem}
 .stats{display:flex;gap:12px;margin-bottom:28px}
-.stat{flex:1;background:#1a1a1a;border:1px solid #222;padding:18px;text-align:center}
+.stat{flex:1;background:#1a1a1a;border:1px solid #222;padding:18px;text-align:center;cursor:pointer;transition:border-color 0.2s}
+.stat:hover{border-color:#444}
+.stat.selected{border-color:#00ff41}
 .stat .lbl{color:#555;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
 .stat .val{font-size:2.2rem;font-weight:bold;color:#e0e0e0}
 .stat.clean .val{color:#00ff41}
@@ -72,9 +74,9 @@ tr:hover td{background:#1a1a1a}
     <button class="gear" id="logout" title="Sign out">&#9211; Logout</button>
   </div>
   <div class="stats">
-    <div class="stat"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
-    <div class="stat clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
-    <div class="stat comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
+    <div class="stat selected" id="f-all"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
+    <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
+    <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
   </div>
   <div class="tblw">
     <table>
@@ -93,7 +95,7 @@ tr:hover td{background:#1a1a1a}
   </div>
 </div>
 <script>
-const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null;
+const B='/ratcatcher',L=50;let pw='',pg=1,refreshTimer=null,vfilter='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}
@@ -110,7 +112,7 @@ async function loadStats(){
   document.getElementById('s-comp').textContent=d.compromised.toLocaleString();
 }
 async function loadRows(){
-  const r=await api('/api/submissions?page='+pg+'&limit='+L),d=await r.json();
+  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')),d=await r.json();
   const tb=document.getElementById('tb');
   tb.innerHTML='';
   if(!d.submissions||!d.submissions.length){
@@ -176,6 +178,15 @@ document.getElementById('admtog').addEventListener('click',function(){
   this.classList.toggle('active');
   document.getElementById('dash').classList.toggle('admin-on');
 });
+function setFilter(v){
+  vfilter=v;pg=1;
+  document.querySelectorAll('.stat').forEach(el=>el.classList.remove('selected'));
+  document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
+  loadRows();
+}
+document.getElementById('f-all').addEventListener('click',()=>setFilter(''));
+document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN'));
+document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED'));
 document.getElementById('logout').addEventListener('click',logout);
 document.getElementById('csvbtn').addEventListener('click',async()=>{
   const r=await api('/api/export');

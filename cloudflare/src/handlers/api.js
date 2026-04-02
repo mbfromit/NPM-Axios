@@ -7,20 +7,27 @@ export async function handleSubmissions(request, env) {
   const page   = Math.max(1, parseInt(url.searchParams.get('page')  || '1',  10) || 1)
   const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 1))
   const offset = (page - 1) * limit
+  const verdict = url.searchParams.get('verdict')
+  const validVerdicts = ['CLEAN', 'COMPROMISED']
+  const filterVerdict = validVerdicts.includes(verdict) ? verdict : null
 
   try {
-    const countRow = await env.DB.prepare(
-      'SELECT COUNT(*) AS total FROM submissions'
-    ).first()
+    const where = filterVerdict ? ' WHERE verdict = ?' : ''
+    const countStmt = env.DB.prepare('SELECT COUNT(*) AS total FROM submissions' + where)
+    const countRow = await (filterVerdict ? countStmt.bind(filterVerdict) : countStmt).first()
     const total = countRow?.total ?? 0
 
-    const rows = await env.DB.prepare(`
+    const rowsStmt = env.DB.prepare(`
       SELECT id, hostname, username, submitted_at, verdict, duration,
              projects_scanned, vulnerable_count, critical_count
-      FROM submissions
+      FROM submissions${where}
       ORDER BY submitted_at DESC
       LIMIT ? OFFSET ?
-    `).bind(limit, offset).all()
+    `)
+    const rows = await (filterVerdict
+      ? rowsStmt.bind(filterVerdict, limit, offset)
+      : rowsStmt.bind(limit, offset)
+    ).all()
 
     return json({ total, page, limit, submissions: rows.results })
   } catch {
