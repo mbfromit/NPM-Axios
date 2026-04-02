@@ -14,3 +14,20 @@ bucket_name = "ratcatcher-reports"
 [[routes]]
 pattern = "mbfromit.com/ratcatcher/*"
 zone_name = "mbfromit.com"
+
+# ── Dev environment (feature/ai-verification) ────────────────────────────────
+[env.dev]
+name = "ratcatcher-dev"
+
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "ratcatcher-dev"
+database_id = "90e9640b-afe2-4e81-9734-b1a0731b5e91"
+
+[[env.dev.r2_buckets]]
+binding = "BUCKET"
+bucket_name = "ratcatcher-dev-reports"
+
+[[env.dev.routes]]
+pattern = "mbfromit.com/ratcatcher-dev/*"
+zone_name = "mbfromit.com"

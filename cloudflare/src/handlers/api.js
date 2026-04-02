@@ -137,7 +137,9 @@ export async function handleReport(request, env, id, type) {
       ? html.replace(/(<body[^>]*>)/, '$1' + backBar)
       : backBar + html
 
-    const reportOrigin = new URL(request.url).origin
+    const reqUrl = new URL(request.url)
+    const reportOrigin = reqUrl.origin
+    const basePath = reqUrl.pathname.match(/^\/(ratcatcher(?:-dev)?)\//)?.[0]?.slice(0,-1) || '/ratcatcher'
     const reportPw = (request.headers.get('X-Admin-Password') || '').replace(/[\\'"]/g, '')
 
     if (type === 'brief') {
@@ -146,7 +148,7 @@ function _rcViewFull(){
   try{if(window.opener&&window.opener.vw){window.opener.vw('${safeId}','full');return}}catch(e){}
   var pw='${reportPw}'||prompt('Admin password:','');
   if(!pw)return;
-  fetch('${reportOrigin}/ratcatcher/api/report/${safeId}/full',{headers:{'X-Admin-Password':pw}})
+  fetch('${reportOrigin}${basePath}/api/report/${safeId}/full',{headers:{'X-Admin-Password':pw}})
     .then(function(r){return r.ok?r.blob():Promise.reject(r.status)})
     .then(function(b){window.open(URL.createObjectURL(b),'_blank')})
     .catch(function(e){alert('Failed to load report ('+e+')')})

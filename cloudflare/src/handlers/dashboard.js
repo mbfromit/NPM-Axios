@@ -115,7 +115,7 @@ tr:hover td{background:#1a1a1a}
   </div>
 </div>
 <script>
-const B='/ratcatcher',L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
+const B=location.pathname.replace(/\/dashboard$/,''),L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}

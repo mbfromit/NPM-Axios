@@ -9,22 +9,28 @@ export default {
     const path = url.pathname
     const method = request.method
 
-    if (path === '/ratcatcher/submit') {
+    // Support both /ratcatcher/ and /ratcatcher-dev/ path prefixes
+    const prefixMatch = path.match(/^\/(ratcatcher(?:-dev)?)\//)
+    if (!prefixMatch) return new Response('Not Found', { status: 404 })
+    const base = '/' + prefixMatch[1]
+    const rel  = path.slice(base.length)  // e.g. "/submit", "/dashboard", "/api/..."
+
+    if (rel === '/submit') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
       return handleSubmit(request, env)
     }
 
-    const deleteMatch = path.match(/^\/ratcatcher\/api\/submissions\/([^/]+)$/)
+    const deleteMatch = rel.match(/^\/api\/submissions\/([^/]+)$/)
     if (deleteMatch && method === 'DELETE') {
       return handleDeleteSubmission(request, env, deleteMatch[1])
     }
 
-    const fcMatch = path.match(/^\/ratcatcher\/api\/submissions\/([^/]+)\/findings-count$/)
+    const fcMatch = rel.match(/^\/api\/submissions\/([^/]+)\/findings-count$/)
     if (fcMatch && method === 'PUT') {
       return handleUpdateFindingsCount(request, env, fcMatch[1])
     }
 
-    const ackMatch = path.match(/^\/ratcatcher\/api\/submissions\/([^/]+)\/acks$/)
+    const ackMatch = rel.match(/^\/api\/submissions\/([^/]+)\/acks$/)
     if (ackMatch) {
       if (method === 'GET')  return handleGetAcks(request, env, ackMatch[1])
       if (method === 'POST') return handlePostAck(request, env, ackMatch[1])
@@ -33,12 +39,12 @@ export default {
 
     if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 })
 
-    if (path === '/ratcatcher/dashboard')        return handleDashboard(request, env)
-    if (path === '/ratcatcher/api/submissions')  return handleSubmissions(request, env)
-    if (path === '/ratcatcher/api/stats')        return handleStats(request, env)
-    if (path === '/ratcatcher/api/export')       return handleExport(request, env)
+    if (rel === '/dashboard')        return handleDashboard(request, env)
+    if (rel === '/api/submissions')  return handleSubmissions(request, env)
+    if (rel === '/api/stats')        return handleStats(request, env)
+    if (rel === '/api/export')       return handleExport(request, env)
 
-    const reportMatch = path.match(/^\/ratcatcher\/api\/report\/([^/]+)\/(brief|full)$/)
+    const reportMatch = rel.match(/^\/api\/report\/([^/]+)\/(brief|full)$/)
     if (reportMatch) return handleReport(request, env, reportMatch[1], reportMatch[2])
 
     return new Response('Not Found', { status: 404 })
