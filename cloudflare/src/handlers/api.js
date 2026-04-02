@@ -91,6 +91,20 @@ export async function handleReport(request, env, id, type) {
       ? html.replace(/(<body[^>]*>)/, '$1' + backBar)
       : backBar + html
 
+    if (type === 'brief') {
+      // Replace file-relative rc-links with dashboard API URLs.
+      // The scan log is not submitted to the dashboard so that link is removed.
+      html = html.replace(
+        /<div class="rc-links">[\s\S]*?<\/div>/,
+        '<div class="rc-links"><a class="rc-link" href="./full">&#128202; Technical Forensic Report</a></div>'
+      )
+      // Fix the secondary report link in the Scan Integrity panel
+      html = html.replace(
+        /(<span class="meta-k">Technical Report<\/span><span class="meta-v">)<a href="[^"]*">/g,
+        '$1<a href="./full">'
+      )
+    }
+
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
   } catch {
     return new Response('Internal Server Error', { status: 500, headers: { 'Content-Type': 'text/plain' } })
