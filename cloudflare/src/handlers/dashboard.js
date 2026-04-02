@@ -119,7 +119,12 @@ async function loadRows(){
   document.getElementById('pp').disabled=pg<=1;
   document.getElementById('pn').disabled=pg>=tp;
 }
-function vw(id){window.open(B+'/api/report/'+id+'/brief','_blank')}
+async function vw(id,type='brief'){
+  const r=await api('/api/report/'+id+'/'+type);
+  if(!r.ok){alert('Failed to load report ('+r.status+')');return;}
+  const blob=await r.blob();
+  window.open(URL.createObjectURL(blob),'_blank');
+}
 async function showDash(){
   document.getElementById('login').style.display='none';
   document.getElementById('dash').style.display='block';
@@ -136,6 +141,7 @@ document.getElementById('lf').addEventListener('submit',async e=>{
 });
 document.getElementById('pp').addEventListener('click',()=>{pg--;loadRows()});
 document.getElementById('pn').addEventListener('click',()=>{pg++;loadRows()});
+window.addEventListener('message',e=>{if(e.data&&e.data.type==='vw')vw(e.data.id,e.data.rtype||'brief')});
 pw=sessionStorage.getItem('rcpw')||'';
 chkAuth().then(ok=>{if(ok)showDash()});
 </script>

@@ -203,7 +203,7 @@ describe('handleReport', () => {
     expect(res.status).toBe(200)
     const html = await res.text()
     expect(html).toContain('Full Technical Report')
-    expect(html).toContain('/ratcatcher/api/report/abc/full')
+    expect(html).toContain("postMessage({type:'vw',id:'abc',rtype:'full'}")
     expect(html).toContain('<h1>Brief</h1>')
   })
 
