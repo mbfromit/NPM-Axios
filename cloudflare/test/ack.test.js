@@ -86,13 +86,31 @@ describe('handlePostAck', () => {
     expect(body.ok).toBe(true)
   })
 
-  it('returns 409 on duplicate ack', async () => {
+  it('returns 200 on duplicate ack (updates existing)', async () => {
     const dupErr = new Error('UNIQUE constraint failed')
+    let callCount = 0
+    const env = {
+      ADMIN_PASSWORD: ADMIN_PW,
+      DB: {
+        prepare: vi.fn().mockReturnValue({
+          bind: vi.fn().mockReturnValue({
+            run: vi.fn().mockImplementation(() => {
+              callCount++
+              if (callCount === 1) return Promise.reject(dupErr)
+              return Promise.resolve({})
+            }),
+          }),
+        }),
+      },
+    }
     const r = await handlePostAck(
-      makeReq('POST', ADMIN_PW, { finding_hash: 'abc123', reason: 'already acked' }),
-      makeEnv([], dupErr),
+      makeReq('POST', ADMIN_PW, { finding_hash: 'abc123', reason: 'updated reason' }),
+      env,
       'sub1'
     )
-    expect(r.status).toBe(409)
+    expect(r.status).toBe(200)
+    const body = await r.json()
+    expect(body.ok).toBe(true)
+    expect(body.updated).toBe(true)
   })
 })

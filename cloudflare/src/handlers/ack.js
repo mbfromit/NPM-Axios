@@ -23,7 +23,7 @@ export async function handleGetAcks(request, env, submissionId) {
 
   try {
     const rows = await env.DB.prepare(
-      'SELECT finding_hash, reason, acknowledged_at FROM finding_acknowledgements WHERE submission_id = ? ORDER BY acknowledged_at ASC'
+      'SELECT finding_hash, reason, acknowledged_at, is_threat FROM finding_acknowledgements WHERE submission_id = ? ORDER BY acknowledged_at ASC'
     ).bind(submissionId).all()
 
     return json({ acks: rows.results ?? [] })
@@ -38,21 +38,30 @@ export async function handlePostAck(request, env, submissionId) {
   let body
   try { body = await request.json() } catch { return json({ error: 'Invalid JSON' }, 400) }
 
-  const { finding_hash, reason } = body ?? {}
+  const { finding_hash, reason, is_threat } = body ?? {}
   if (!finding_hash) return json({ error: 'Missing finding_hash' }, 400)
   if (!reason || !String(reason).trim()) return json({ error: 'Reason is required' }, 400)
 
   const id  = crypto.randomUUID()
   const now = new Date().toISOString()
+  const threat = is_threat ? 1 : 0
 
   try {
     await env.DB.prepare(
-      'INSERT INTO finding_acknowledgements (id, submission_id, finding_hash, reason, acknowledged_at) VALUES (?, ?, ?, ?, ?)'
-    ).bind(id, submissionId, finding_hash, String(reason).trim(), now).run()
+      'INSERT INTO finding_acknowledgements (id, submission_id, finding_hash, reason, acknowledged_at, is_threat) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(id, submissionId, finding_hash, String(reason).trim(), now, threat).run()
 
-    return json({ ok: true, id, acknowledged_at: now }, 201)
+    return json({ ok: true, id, acknowledged_at: now, is_threat: threat }, 201)
   } catch (e) {
-    if (String(e).includes('UNIQUE')) return json({ error: 'Already acknowledged' }, 409)
+    if (String(e).includes('UNIQUE')) {
+      // Update existing ack if changing to/from threat
+      try {
+        await env.DB.prepare(
+          'UPDATE finding_acknowledgements SET reason = ?, is_threat = ?, acknowledged_at = ? WHERE submission_id = ? AND finding_hash = ?'
+        ).bind(String(reason).trim(), threat, now, submissionId, finding_hash).run()
+        return json({ ok: true, acknowledged_at: now, is_threat: threat, updated: true }, 200)
+      } catch { return json({ error: 'Database error' }, 500) }
+    }
     return json({ error: 'Database error' }, 500)
   }
 }

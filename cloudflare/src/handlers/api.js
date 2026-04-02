@@ -13,14 +13,17 @@ export async function handleSubmissions(request, env) {
   const search = (url.searchParams.get('search') || '').trim()
   const reviewed = url.searchParams.get('reviewed')
   const filterReviewed = reviewed === '1' || reviewed === '0' ? reviewed : null
+  const positive = url.searchParams.get('positive')
 
   try {
     const conditions = []
     const binds = []
     if (filterVerdict) { conditions.push('verdict = ?'); binds.push(filterVerdict) }
     if (search) { conditions.push('(hostname LIKE ? OR username LIKE ?)'); binds.push('%'+search+'%', '%'+search+'%') }
-    if (filterReviewed === '1') {
-      conditions.push('findings_count > 0 AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) >= findings_count')
+    if (positive === '1') {
+      conditions.push('(SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id AND is_threat = 1) > 0')
+    } else if (filterReviewed === '1') {
+      conditions.push('findings_count > 0 AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) >= findings_count AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id AND is_threat = 1) = 0')
     } else if (filterReviewed === '0') {
       conditions.push('(findings_count IS NULL OR findings_count = 0 OR (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) < findings_count)')
     }
@@ -34,7 +37,9 @@ export async function handleSubmissions(request, env) {
       SELECT s.*,
         CASE WHEN s.submitted_at = latest.max_at THEN 1 ELSE 0 END AS is_latest,
         COALESCE(ac.ack_count, 0) AS ack_count,
-        CASE WHEN s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count THEN 1 ELSE 0 END AS reviewed
+        COALESCE(tc.threat_count, 0) AS threat_count,
+        CASE WHEN COALESCE(tc.threat_count, 0) > 0 THEN 1 ELSE 0 END AS positive,
+        CASE WHEN COALESCE(tc.threat_count, 0) = 0 AND s.findings_count > 0 AND COALESCE(ac.ack_count, 0) >= s.findings_count THEN 1 ELSE 0 END AS reviewed
       FROM (
         SELECT id, hostname, username, submitted_at, verdict, duration,
                projects_scanned, vulnerable_count, critical_count, findings_count
@@ -48,6 +53,9 @@ export async function handleSubmissions(request, env) {
       LEFT JOIN (
         SELECT submission_id, COUNT(*) AS ack_count FROM finding_acknowledgements GROUP BY submission_id
       ) ac ON s.id = ac.submission_id
+      LEFT JOIN (
+        SELECT submission_id, COUNT(*) AS threat_count FROM finding_acknowledgements WHERE is_threat = 1 GROUP BY submission_id
+      ) tc ON s.id = tc.submission_id
     `)
     const rows = await rowsStmt.bind(...binds, limit, offset).all()
 
@@ -65,11 +73,14 @@ export async function handleStats(request, env) {
       SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN verdict = 'CLEAN' THEN 1 ELSE 0 END) AS clean,
+        SUM(CASE WHEN COALESCE(tc.threat_count, 0) > 0 THEN 1 ELSE 0 END) AS positive,
         SUM(CASE WHEN verdict = 'COMPROMISED'
+              AND COALESCE(tc.threat_count, 0) = 0
               AND s.findings_count > 0
               AND COALESCE(ac.ack_count, 0) >= s.findings_count
              THEN 1 ELSE 0 END) AS reviewed,
         SUM(CASE WHEN verdict = 'COMPROMISED'
+              AND COALESCE(tc.threat_count, 0) = 0
               AND (s.findings_count IS NULL OR s.findings_count = 0
                    OR COALESCE(ac.ack_count, 0) < s.findings_count)
              THEN 1 ELSE 0 END) AS compromised
@@ -77,13 +88,17 @@ export async function handleStats(request, env) {
       LEFT JOIN (
         SELECT submission_id, COUNT(*) AS ack_count FROM finding_acknowledgements GROUP BY submission_id
       ) ac ON s.id = ac.submission_id
+      LEFT JOIN (
+        SELECT submission_id, COUNT(*) AS threat_count FROM finding_acknowledgements WHERE is_threat = 1 GROUP BY submission_id
+      ) tc ON s.id = tc.submission_id
     `).first()
 
     return json({
       total:       row?.total       ?? 0,
       clean:       row?.clean       ?? 0,
       compromised: row?.compromised ?? 0,
-      reviewed:    row?.reviewed    ?? 0
+      reviewed:    row?.reviewed    ?? 0,
+      positive:    row?.positive    ?? 0
     })
   } catch {
     return json({ error: 'Database error' }, 500)
@@ -157,12 +172,18 @@ function _rcViewFull(){
 
       // Inject ack styles
       const ackStyles = `<style>
-.rc-ack-btn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:4px 12px;cursor:pointer;font-family:'Consolas',monospace;font-size:11px;border-radius:3px;margin-top:10px;display:block}
+.rc-ack-btns{display:flex;gap:8px;margin-top:10px}
+.rc-ack-btn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:4px 12px;cursor:pointer;font-family:'Consolas',monospace;font-size:11px;border-radius:3px;display:block}
 .rc-ack-btn:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
+.rc-threat-btn{background:none;border:1px solid #5f2a2a;color:#f85149;padding:4px 12px;cursor:pointer;font-family:'Consolas',monospace;font-size:11px;border-radius:3px;display:block}
+.rc-threat-btn:hover{border-color:#f85149;background:rgba(248,81,73,.08)}
 .rc-ack-done{display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding:8px 10px;background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25);border-radius:3px}
+.rc-ack-done.threat{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.25)}
 .rc-ack-check{color:#3fb950;font-size:14px;flex-shrink:0;margin-top:1px}
+.rc-ack-done.threat .rc-ack-check{color:#f85149}
 .rc-ack-info{display:flex;flex-direction:column;gap:2px}
 .rc-ack-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#3fb950;font-family:'Consolas',monospace}
+.rc-ack-done.threat .rc-ack-label{color:#f85149}
 .rc-ack-reason{font-size:11px;color:#8b949e;font-family:'Consolas',monospace;word-break:break-word}
 .rc-ack-when{font-size:10px;color:#484f58;font-family:'Consolas',monospace}
 .rc-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;align-items:center;justify-content:center}
@@ -179,6 +200,10 @@ function _rcViewFull(){
 .rc-modal-cancel:hover{border-color:#555;color:#ccc}
 .rc-modal-save{background:#238636;border:1px solid #2ea043;color:#fff;font-weight:bold}
 .rc-modal-save:hover{background:#2ea043}
+.rc-modal.threat h3{color:#f85149}
+.rc-modal.threat .rc-modal-save{background:#da3633;border-color:#f85149}
+.rc-modal.threat .rc-modal-save:hover{background:#f85149}
+.rc-modal.threat textarea:focus{border-color:#f85149}
 </style>`
 
       // Inject ack script — use absolute URL so it works from blob: origins
@@ -191,10 +216,10 @@ function _rcViewFull(){
   // Modal
   var overlay=document.createElement('div');
   overlay.className='rc-modal-overlay';
-  overlay.innerHTML='<div class="rc-modal">'
-    +'<h3>ACKNOWLEDGE FINDING</h3>'
+  overlay.innerHTML='<div class="rc-modal" id="rc-m-dialog">'
+    +'<h3 id="rc-m-title">ACKNOWLEDGE FINDING</h3>'
     +'<p id="rc-m-path" style="color:#e6edf3;font-family:monospace;font-size:11px;margin-bottom:10px;word-break:break-all"></p>'
-    +'<p>Provide a reason why this finding is benign or not applicable. Be specific — this record is kept for audit purposes.</p>'
+    +'<p id="rc-m-desc">Provide a reason why this finding is benign or not applicable. Be specific — this record is kept for audit purposes.</p>'
     +'<textarea id="rc-m-reason" placeholder="e.g. .NET shadow copy cache from Solutions clinical app — not RAT-related. Verified by jsmith 2026-04-02."></textarea>'
     +'<div class="rc-modal-err" id="rc-m-err"></div>'
     +'<div class="rc-modal-btns">'
@@ -203,13 +228,23 @@ function _rcViewFull(){
     +'</div></div>';
   document.body.appendChild(overlay);
 
-  var currentHash=null,currentEl=null;
+  var currentHash=null,currentEl=null,currentThreat=false;
   document.getElementById('rc-m-cancel').onclick=function(){overlay.classList.remove('open')};
   overlay.onclick=function(e){if(e.target===overlay)overlay.classList.remove('open')};
   document.getElementById('rc-m-save').onclick=saveAck;
 
-  function openModal(hash,el,pathText){
-    currentHash=hash;currentEl=el;
+  function openModal(hash,el,pathText,isThreat){
+    currentHash=hash;currentEl=el;currentThreat=!!isThreat;
+    var dlg=document.getElementById('rc-m-dialog');
+    dlg.className=isThreat?'rc-modal threat':'rc-modal';
+    document.getElementById('rc-m-title').textContent=isThreat?'CONFIRM THREAT':'ACKNOWLEDGE FINDING';
+    document.getElementById('rc-m-desc').textContent=isThreat
+      ?'Describe the confirmed threat. This will flag the submission as POSITIVE FINDING on the dashboard.'
+      :'Provide a reason why this finding is benign or not applicable. Be specific \u2014 this record is kept for audit purposes.';
+    document.getElementById('rc-m-save').textContent=isThreat?'Confirm Threat':'Save Acknowledgement';
+    document.getElementById('rc-m-reason').placeholder=isThreat
+      ?'e.g. Confirmed RAT beacon — C2 callback to 185.x.x.x on port 443. Escalated to IR team.'
+      :'e.g. .NET shadow copy cache from Solutions clinical app \u2014 not RAT-related. Verified by jsmith 2026-04-02.';
     document.getElementById('rc-m-path').textContent=pathText;
     document.getElementById('rc-m-reason').value='';
     document.getElementById('rc-m-err').textContent='';
@@ -220,45 +255,44 @@ function _rcViewFull(){
   function saveAck(){
     var reason=document.getElementById('rc-m-reason').value.trim();
     if(!reason){document.getElementById('rc-m-err').textContent='Reason is required.';return;}
-    document.getElementById('rc-m-save').disabled=true;
-    document.getElementById('rc-m-save').textContent='Saving...';
+    var saveBtn=document.getElementById('rc-m-save');
+    saveBtn.disabled=true;
+    saveBtn.textContent='Saving...';
     fetch(B+'/api/submissions/'+SUB+'/acks',{
       method:'POST',
       headers:getHeaders(),
-      body:JSON.stringify({finding_hash:currentHash,reason:reason})
+      body:JSON.stringify({finding_hash:currentHash,reason:reason,is_threat:currentThreat})
     })
     .then(function(r){return r.json().then(function(b){return{status:r.status,body:b}})})
     .then(function(res){
-      document.getElementById('rc-m-save').disabled=false;
-      document.getElementById('rc-m-save').textContent='Save Acknowledgement';
-      if(res.status===201||res.status===409){
+      saveBtn.disabled=false;
+      saveBtn.textContent=currentThreat?'Confirm Threat':'Save Acknowledgement';
+      if(res.status===200||res.status===201||res.status===409){
         overlay.classList.remove('open');
-        markAcked(currentEl,reason,res.body.acknowledged_at||new Date().toISOString());
+        markDone(currentEl,reason,res.body.acknowledged_at||new Date().toISOString(),currentThreat);
       } else {
         document.getElementById('rc-m-err').textContent=res.body.error||'Save failed.';
       }
     })
     .catch(function(err){
       console.error('[RatCatcher ack]',err);
-      document.getElementById('rc-m-save').disabled=false;
-      document.getElementById('rc-m-save').textContent='Save Acknowledgement';
-      document.getElementById('rc-m-err').textContent='Network error — please try again.';
+      saveBtn.disabled=false;
+      saveBtn.textContent=currentThreat?'Confirm Threat':'Save Acknowledgement';
+      document.getElementById('rc-m-err').textContent='Network error \u2014 please try again.';
     });
   }
 
-  function markAcked(el,reason,when){
-    var btn=el.querySelector('.rc-ack-btn');
-    if(btn)btn.remove();
-    if(el.querySelector('.rc-ack-done'))return;
+  function markDone(el,reason,when,isThreat){
+    var btns=el.querySelector('.rc-ack-btns');
+    if(btns)btns.remove();
+    var old=el.querySelector('.rc-ack-done');
+    if(old)old.remove();
     var d=document.createElement('div');
-    d.className='rc-ack-done';
+    d.className=isThreat?'rc-ack-done threat':'rc-ack-done';
     var ts=when?new Date(when).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}):'';
-    d.innerHTML='<span class="rc-ack-check">&#10003;</span>'
-      +'<div class="rc-ack-info">'
-      +'<span class="rc-ack-label">ACKNOWLEDGED</span>'
-      +'<span class="rc-ack-reason">'+esc(reason)+'</span>'
-      +(ts?'<span class="rc-ack-when">'+esc(ts)+'</span>':'')
-      +'</div>';
+    d.innerHTML=isThreat
+      ?'<span class="rc-ack-check">&#9888;</span><div class="rc-ack-info"><span class="rc-ack-label">CONFIRMED THREAT</span><span class="rc-ack-reason">'+esc(reason)+'</span>'+(ts?'<span class="rc-ack-when">'+esc(ts)+'</span>':'')+'</div>'
+      :'<span class="rc-ack-check">&#10003;</span><div class="rc-ack-info"><span class="rc-ack-label">ACKNOWLEDGED</span><span class="rc-ack-reason">'+esc(reason)+'</span>'+(ts?'<span class="rc-ack-when">'+esc(ts)+'</span>':'')+'</div>';
     el.appendChild(d);
   }
 
@@ -294,16 +328,23 @@ function _rcViewFull(){
       el.dataset.fhash=hash;
       uniqueHashes.add(hash);
       if(acksMap[hash]){
-        markAcked(el,acksMap[hash].reason,acksMap[hash].acknowledged_at);
+        markDone(el,acksMap[hash].reason,acksMap[hash].acknowledged_at,!!acksMap[hash].is_threat);
       } else {
+        var wrap=document.createElement('div');
+        wrap.className='rc-ack-btns';
         var btn=document.createElement('button');
         btn.className='rc-ack-btn';
         btn.textContent='Acknowledge Finding';
-        btn.dataset.hash=hash;
+        var tbtn=document.createElement('button');
+        tbtn.className='rc-threat-btn';
+        tbtn.textContent='Confirm Threat';
         (function(h,element,p){
-          btn.onclick=function(){openModal(h,element,p)};
+          btn.onclick=function(){openModal(h,element,p,false)};
+          tbtn.onclick=function(){openModal(h,element,p,true)};
         })(hash,el,path||type);
-        el.appendChild(btn);
+        wrap.appendChild(btn);
+        wrap.appendChild(tbtn);
+        el.appendChild(wrap);
       }
     }
     // Correct findings_count if HTML has duplicate finding divs

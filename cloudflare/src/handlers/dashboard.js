@@ -21,11 +21,11 @@ input[type=password]:focus{outline:none;border-color:#00ff41}
 .hdr h1{color:#00ff41;font-size:1.1rem;letter-spacing:2px}
 .hdr .badge{color:#444;font-size:0.78rem}
 .stats{display:flex;gap:12px;margin-bottom:28px}
-.stat{flex:1;background:#1a1a1a;border:1px solid #222;padding:18px;text-align:center;cursor:pointer;transition:border-color 0.2s}
+.stat{flex:1;min-width:120px;background:#1a1a1a;border:1px solid #222;padding:12px 8px;text-align:center;cursor:pointer;transition:border-color 0.2s}
 .stat:hover{border-color:#444}
 .stat.selected{border-color:#00ff41}
 .stat .lbl{color:#555;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.stat .val{font-size:2.2rem;font-weight:bold;color:#e0e0e0}
+.stat .val{font-size:1.8rem;font-weight:bold;color:#e0e0e0}
 .stat.clean .val{color:#00ff41}
 .stat.comp .val{color:#ff4444}
 .tblw{overflow-x:auto}
@@ -59,8 +59,12 @@ tr:hover td{background:#1a1a1a}
 .search .clr:hover{border-color:#555;color:#999}
 .latest{color:#00ff41;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
 .reviewed{color:#3fb950;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
+.positive{color:#f85149;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.stat.pos .val{color:#f85149}
 .stat.rvw .val{color:#3fb950}
 .stat.nrvw .val{color:#f0883e}
+.stats{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -86,6 +90,7 @@ tr:hover td{background:#1a1a1a}
     <div class="stat selected" id="f-all"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
     <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
     <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
+    <div class="stat pos" id="f-pos"><div class="lbl">Positive Findings</div><div class="val" id="s-pos">-</div></div>
     <div class="stat rvw" id="f-reviewed"><div class="lbl">Reviewed</div><div class="val" id="s-reviewed">-</div></div>
     <div class="stat nrvw" id="f-notrev"><div class="lbl">Not Reviewed</div><div class="val" id="s-notrev">-</div></div>
   </div>
@@ -110,7 +115,7 @@ tr:hover td{background:#1a1a1a}
   </div>
 </div>
 <script>
-const B='/ratcatcher',L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',srchQ='';
+const B='/ratcatcher',L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
 async function api(p){return fetch(B+p,{headers:{'X-Admin-Password':pw}})}
@@ -126,12 +131,13 @@ async function loadStats(){
     document.getElementById('s-total').textContent=(d.total??0).toLocaleString();
     document.getElementById('s-clean').textContent=(d.clean??0).toLocaleString();
     document.getElementById('s-comp').textContent=(d.compromised??0).toLocaleString();
+    document.getElementById('s-pos').textContent=(d.positive??0).toLocaleString();
     document.getElementById('s-reviewed').textContent=(d.reviewed??0).toLocaleString();
     document.getElementById('s-notrev').textContent=(d.compromised??0).toLocaleString();
   }catch(e){console.error('loadStats',e)}
 }
 async function loadRows(){
-  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(rfilter!==''?'&reviewed='+rfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();
+  const r=await api('/api/submissions?page='+pg+'&limit='+L+(vfilter?'&verdict='+vfilter:'')+(pfilter?'&positive=1':'')+(rfilter!==''?'&reviewed='+rfilter:'')+(srchQ?'&search='+encodeURIComponent(srchQ):'')),d=await r.json();
   const tb=document.getElementById('tb');
   tb.innerHTML='';
   if(!d.submissions||!d.submissions.length){
@@ -144,7 +150,7 @@ async function loadRows(){
       const ltag=s.is_latest?'<span class="latest">LATEST</span>':'';
       tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+ltag+'</td><td>'+esc(s.username)+'</td>'
         +'<td>'+esc(fmtDur(s.duration))+'</td>'
-        +'<td class="vrd">'+(s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN')+(s.reviewed?'<span class="reviewed"> &#10003; REVIEWED</span>':'')+'</td>'
+        +'<td class="vrd">'+(s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN')+(s.positive?'<span class="positive"> &#9888; POSITIVE FINDING</span>':s.reviewed?'<span class="reviewed"> &#10003; REVIEWED</span>':'')+'</td>'
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
         +' <button class="dbtn" onclick="del(&#39;'+esc(s.id)+'&#39;,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">Delete</button></td>';
       tb.appendChild(tr);
@@ -198,19 +204,21 @@ document.getElementById('admtog').addEventListener('click',function(){
   this.classList.toggle('active');
   document.getElementById('dash').classList.toggle('admin-on');
 });
-function setFilter(v,rv){
-  vfilter=v;rfilter=rv??'';pg=1;
+function setFilter(v,rv,pf){
+  vfilter=v;rfilter=rv??'';pfilter=pf??'';pg=1;
   document.querySelectorAll('.stat').forEach(el=>el.classList.remove('selected'));
-  if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
+  if(pf)document.getElementById('f-pos').classList.add('selected');
+  else if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
   else if(rv==='0')document.getElementById('f-notrev').classList.add('selected');
   else document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
   loadRows();
 }
-document.getElementById('f-all').addEventListener('click',()=>setFilter('',''));
-document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN',''));
-document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED',''));
-document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1'));
-document.getElementById('f-notrev').addEventListener('click',()=>setFilter('COMPROMISED','0'));
+document.getElementById('f-all').addEventListener('click',()=>setFilter('','',''));
+document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN','',''));
+document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED','',''));
+document.getElementById('f-pos').addEventListener('click',()=>setFilter('','','1'));
+document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1',''));
+document.getElementById('f-notrev').addEventListener('click',()=>setFilter('COMPROMISED','0',''));
 let srchTimer=null;
 document.getElementById('srch').addEventListener('input',function(){
   clearTimeout(srchTimer);

@@ -214,7 +214,7 @@ describe('handleStats', () => {
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ total: 100, clean: 90, compromised: 10, reviewed: 0 })
+    expect(body).toEqual({ total: 100, clean: 90, compromised: 10, reviewed: 0, positive: 0 })
   })
 
   it('returns zeros on empty table', async () => {
@@ -224,7 +224,7 @@ describe('handleStats', () => {
     }))
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     const body = await res.json()
-    expect(body).toEqual({ total: 0, clean: 0, compromised: 0, reviewed: 0 })
+    expect(body).toEqual({ total: 0, clean: 0, compromised: 0, reviewed: 0, positive: 0 })
   })
 
   it('returns 500 when DB query fails', async () => {
