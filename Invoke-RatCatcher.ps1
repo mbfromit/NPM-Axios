@@ -6,29 +6,20 @@
     Runs ten checks covering the full compromise kill chain:
     lockfile evidence, deployed package artifacts, npm cache, dropped RAT payloads,
     persistence mechanisms, XOR-obfuscated indicators, and network evidence.
-    Generates a forensic report and optionally emails it.
+    Generates a forensic report and submits results to the RatCatcher dashboard.
 .PARAMETER Path
     Root directories to scan for Node.js projects. Defaults to common dev locations.
 .PARAMETER OutputPath
     Directory for report and log files.
-.PARAMETER SendEmail
-    Send the report by email. Requires -SMTPServer, -FromAddress, -ToAddress.
 .EXAMPLE
     .\Invoke-RatCatcher.ps1
 .EXAMPLE
-    .\Invoke-RatCatcher.ps1 -Path C:\Dev -SendEmail -SMTPServer smtp.co.com -FromAddress sec@co.com -ToAddress ir@co.com
+    .\Invoke-RatCatcher.ps1 -Path C:\Dev
 #>
 [CmdletBinding()]
 param(
     [string[]]$Path         = $(if ($env:OS -eq 'Windows_NT') { @('C:\') } else { @('/') }),
     [string]$OutputPath     = $(if ($env:OS -eq 'Windows_NT') { 'C:\Logs' } else { '/tmp' }),
-    [switch]$SendEmail,
-    [string]$SMTPServer,
-    [int]$SMTPPort          = 587,
-    [string]$FromAddress,
-    [string[]]$ToAddress,
-    [PSCredential]$Credential,
-    [bool]$UseTLS           = $true,
     [switch]$NoSubmit,
     [int]$Threads           = 4,
     # Test-artifact overrides — point at synthetic data without touching real npm cache or firewall log
@@ -61,11 +52,6 @@ if (Test-Path $logoFile) {
     try { $logoBase64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes($logoFile)) } catch { }
 }
 
-if ($SendEmail) {
-    if (-not $SMTPServer)  { throw '-SMTPServer is required when -SendEmail is specified' }
-    if (-not $FromAddress) { throw '-FromAddress is required when -SendEmail is specified' }
-    if (-not $ToAddress)   { throw '-ToAddress is required when -SendEmail is specified' }
-}
 
 # ── Resolve scan paths (expand drive roots, skip OS/system folders) ───────────
 $excludedTopLevel = @(
@@ -105,6 +91,20 @@ Write-Host ''
 $confirm = Read-Host '  Press ENTER to start the scan, or type Q to quit'
 if ($confirm -match '^[Qq]') { Write-Host 'Scan cancelled.'; exit 0 }
 Write-Host ''
+
+# ── Submission password ───────────────────────────────────────────────────────
+if (-not $NoSubmit) {
+    Write-Host '  A submission password is required to run the scan.'
+    Write-Host '  Contact your manager or the DevOps team if you do not have one.'
+    Write-Host ''
+    $submitPassword = Read-Host '  Enter RatCatcher submission password'
+    if ([string]::IsNullOrWhiteSpace($submitPassword)) {
+        Write-Host ''
+        Write-Host '  No password entered — scan cancelled.'
+        exit 0
+    }
+    Write-Host ''
+}
 
 $null = New-Item -ItemType Directory -Path $OutputPath -Force
 $hn   = if ($env:COMPUTERNAME) { $env:COMPUTERNAME } elseif ($env:HOSTNAME) { $env:HOSTNAME } else { 'unknown' }
@@ -224,24 +224,12 @@ $briefingPath = New-ExecBriefing `
 
 Write-Log "Executive briefing: $briefingPath"
 
-# ── Check 10: Email ───────────────────────────────────────────────────────────
-if ($SendEmail) {
-    Write-Log "[10/10] Emailing report to $($ToAddress -join ', ')..."
-    $sent = Send-ScanReport -ReportPaths @($briefingPath, $reportPath) -SMTPServer $SMTPServer -SMTPPort $SMTPPort `
-        -FromAddress $FromAddress -ToAddress $ToAddress -Credential $Credential -UseTLS $UseTLS
-    if ($sent) { Write-Log 'Email sent.' } else { Write-Log 'Email failed - report available locally.' 'WARN' }
-} else {
-    Write-Log "[10/10] Email skipped (no -SendEmail flag)"
-}
-
-# ── Summary ───────────────────────────────────────────────────────────────────
+# ── Check 10: Submit to dashboard ─────────────────────────────────────────────
 $vulnCount      = @($lockfileResults | Where-Object { $_.HasVulnerableAxios -or $_.HasMaliciousPlainCrypto }).Count
 $criticalCount  = @($artifacts + $cacheFindings + $droppedPayloads + $persistenceArtifacts + $xorFindings + $networkEvidence | Where-Object { $_.Severity -eq 'Critical' }).Count
 
-# ── Submit to dashboard (unless -NoSubmit) ────────────────────────────────────
 if (-not $NoSubmit) {
-    Write-Log ''
-    $submitPassword = Read-Host '  Enter RatCatcher submission password (press Enter to skip)'
+    Write-Log "[10/10] Submitting results to dashboard..."
     $submitVerdict  = if ($vulnCount -gt 0 -or $criticalCount -gt 0) { 'COMPROMISED' } else { 'CLEAN' }
 
     $submitResult = Submit-ScanToApi `
@@ -260,11 +248,12 @@ if (-not $NoSubmit) {
         -ReportPath      $reportPath
 
     switch ($submitResult.Status) {
-        'skipped'        { Write-Log '[WARN] Submission skipped' 'WARN' }
         'success'        { Write-Log "[INFO] Scan submitted successfully (ID: $($submitResult.Id))" }
         'wrong-password' { Write-Log 'Submission password incorrect — report not submitted' 'WARN' }
         'error'          { Write-Log "Submission failed: $($submitResult.Message)" 'WARN' }
     }
+} else {
+    Write-Log "[10/10] Dashboard submission skipped (-NoSubmit)"
 }
 
 Write-Log ''

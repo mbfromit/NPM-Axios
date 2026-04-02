@@ -67,16 +67,13 @@ The script will display the exact folders it intends to scan and ask for confirm
 .\Invoke-RatCatcher.ps1 -OutputPath C:\IR\Reports
 ```
 
-### Email the reports when done
+### Submission password
 
-```powershell
-.\Invoke-RatCatcher.ps1 -SendEmail `
-    -SMTPServer smtp.yourcompany.com `
-    -FromAddress security@yourcompany.com `
-    -ToAddress ir-team@yourcompany.com
-```
+Before the scan begins, you will be prompted to enter a **submission password**. This password is required — the scan will not run without it. Contact your **manager** or the **DevOps team** to obtain the password.
 
-Reports are always saved locally to `C:\Logs` (or `-OutputPath`) regardless of email settings.
+The password authorises your scan results to be submitted to the RatCatcher dashboard so the security team can track remediation progress across the organisation.
+
+Reports are always saved locally to `C:\Logs` (or `-OutputPath`) in addition to being submitted.
 
 ---
 
@@ -173,9 +170,9 @@ Produces two output files in the report directory:
 
 Both files are named with the hostname and timestamp for easy identification.
 
-### Check 10 — Email Delivery
+### Check 10 — Dashboard Submission
 
-If `-SendEmail` was specified, emails both the technical report and the executive briefing as attachments via the configured SMTP server. The scan always completes and saves reports locally first; email failure does not affect local output.
+Submits the scan results (verdict, finding counts, and report files) to the RatCatcher dashboard using the submission password entered at the start of the scan. Reports are always saved locally regardless of whether submission succeeds.
 
 ---
 
