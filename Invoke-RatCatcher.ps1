@@ -231,6 +231,26 @@ if (-not $NoVerify) {
     Write-Log "[AI] LLM verification skipped (-NoVerify)"
 }
 
+# ── Compute aggregate AI verdict ──────────────────────────────────────────────
+$aiVerdict = $null
+if (-not $NoVerify) {
+    $allFindingsList = @($artifacts) + @($cacheFindings) + @($droppedPayloads) +
+                       @($persistenceArtifacts) + @($xorFindings) + @($networkEvidence)
+    if ($allFindingsList.Count -eq 0) {
+        $aiVerdict = 'AI_CLEAN'
+    } else {
+        $successfulVerdicts = @($allFindingsList | Where-Object { $_.AiVerdict -and $_.AiVerdict -ne 'Error' })
+        if ($successfulVerdicts.Count -gt 0) {
+            if ($successfulVerdicts | Where-Object { $_.AiVerdict -in 'Confirmed', 'Likely' }) {
+                $aiVerdict = 'AI_COMPROMISE'
+            } else {
+                $aiVerdict = 'AI_FALSE_POSITIVE'
+            }
+        }
+    }
+    Write-Log "[AI] Aggregate verdict: $(if ($aiVerdict) { $aiVerdict } else { 'null (all findings errored)' })"
+}
+
 # ── Check 9: Generate report ──────────────────────────────────────────────────
 $duration = (Get-Date) - $startTime
 $metadata = @{
@@ -303,7 +323,8 @@ if (-not $NoSubmit) {
         -CriticalCount   $criticalCount `
         -PathsScanned    ($resolvedPaths | ConvertTo-Json -Compress) `
         -BriefPath       $briefingPath `
-        -ReportPath      $reportPath
+        -ReportPath      $reportPath `
+        -AiVerdict       $aiVerdict
 
     switch ($submitResult.Status) {
         'success'        { Write-Log "[INFO] Scan submitted successfully (ID: $($submitResult.Id))" }
