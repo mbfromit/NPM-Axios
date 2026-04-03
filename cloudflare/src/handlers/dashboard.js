@@ -107,10 +107,9 @@ tr:hover td{background:#1a1a1a}
   <div class="lbox">
     <h1>RATCATCHER</h1>
     <p class="sub">View My Scans</p>
-    <p class="uhelp">Enter your <strong style="color:#ccc">username</strong> and <strong style="color:#ccc">hostname</strong> as shown at the top of your RatCatcher scan output.<br><br>Not sure of your hostname? Open Command Prompt and type <code>hostname</code>, or check the scan report header.</p>
+    <p class="uhelp">Enter the <strong style="color:#ccc">username</strong> you were logged in as when your RatCatcher scan was run.<br><br>Not sure? Check the top of your scan output, or open Command Prompt and type <code>whoami</code>.</p>
     <form id="ulf">
       <input type="text" id="uname" placeholder="Username (e.g. jsmith)" autocomplete="username">
-      <input type="text" id="uhost" placeholder="Hostname (e.g. DESKTOP-ABC123)" autocomplete="off">
       <button type="submit" class="btn">View My Scans</button>
       <div class="lerr" id="ulerr"></div>
     </form>
@@ -329,12 +328,12 @@ document.getElementById('pp').addEventListener('click',function(){pg--;loadRows(
 document.getElementById('pn').addEventListener('click',function(){pg++;loadRows()});
 
 // ── User ──
-async function checkUserAuth(username,hostname){
-  const r=await fetch(B+'/api/user-submissions?username='+encodeURIComponent(username)+'&hostname='+encodeURIComponent(hostname));
+async function checkUserAuth(username){
+  const r=await fetch(B+'/api/user-submissions?username='+encodeURIComponent(username));
   return r.ok;
 }
 async function loadUserRows(){
-  const r=await fetch(B+'/api/user-submissions?username='+encodeURIComponent(uUser)+'&hostname='+encodeURIComponent(uHost)+'&page='+uPg+'&limit='+L);
+  const r=await fetch(B+'/api/user-submissions?username='+encodeURIComponent(uUser)+'&page='+uPg+'&limit='+L);
   const d=await r.json();
   const tb=document.getElementById('utb');
   tb.innerHTML='';
@@ -363,14 +362,14 @@ async function loadUserRows(){
   document.getElementById('upn').disabled=uPg>=tp;
 }
 async function vwUser(id,type){
-  const r=await fetch(B+'/api/user-report/'+id+'/'+(type||'brief')+'?username='+encodeURIComponent(uUser)+'&hostname='+encodeURIComponent(uHost));
+  const r=await fetch(B+'/api/user-report/'+id+'/'+(type||'brief')+'?username='+encodeURIComponent(uUser));
   if(!r.ok){alert('Failed to load report ('+r.status+')');return;}
   const blob=await r.blob();
   window.open(URL.createObjectURL(blob),'_blank');
 }
-async function showUserDash(username,hostname){
-  uUser=username;uHost=hostname;uPg=1;
-  document.getElementById('ubadge').textContent=username+' \u2014 '+hostname;
+async function showUserDash(username){
+  uUser=username;uPg=1;
+  document.getElementById('ubadge').textContent=username+'\'s Scans';
   hide(['choice','login','ulogin','dash']);
   show('udash','block');
   await loadUserRows();
@@ -383,14 +382,13 @@ function userLogout(){
 document.getElementById('ulf').addEventListener('submit',async function(e){
   e.preventDefault();
   const username=document.getElementById('uname').value.trim();
-  const hostname=document.getElementById('uhost').value.trim();
-  if(!username||!hostname){document.getElementById('ulerr').textContent='Both fields are required.';return;}
+  if(!username){document.getElementById('ulerr').textContent='Username is required.';return;}
   document.getElementById('ulerr').textContent='Checking\u2026';
-  const ok=await checkUserAuth(username,hostname);
-  if(!ok){document.getElementById('ulerr').textContent='No scans found for that username and hostname.';return;}
+  const ok=await checkUserAuth(username);
+  if(!ok){document.getElementById('ulerr').textContent='No scans found for that username.';return;}
   document.getElementById('ulerr').textContent='';
-  sessionStorage.setItem('rcuser',JSON.stringify({username:username,hostname:hostname}));
-  await showUserDash(username,hostname);
+  sessionStorage.setItem('rcuser',JSON.stringify({username:username}));
+  await showUserDash(username);
 });
 document.getElementById('ulogout').addEventListener('click',userLogout);
 document.getElementById('upp').addEventListener('click',function(){uPg--;loadUserRows()});
@@ -409,8 +407,8 @@ document.getElementById('upn').addEventListener('click',function(){uPg++;loadUse
   if(savedUser){
     try{
       var u=JSON.parse(savedUser);
-      var uok=await checkUserAuth(u.username,u.hostname);
-      if(uok){await showUserDash(u.username,u.hostname);return;}
+      var uok=await checkUserAuth(u.username);
+      if(uok){await showUserDash(u.username);return;}
     }catch(ex){}
     sessionStorage.removeItem('rcuser');
   }

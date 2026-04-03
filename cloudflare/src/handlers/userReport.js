@@ -1,22 +1,20 @@
 export async function handleUserReport(request, env, id, type) {
   const url      = new URL(request.url)
   const username = (url.searchParams.get('username') || '').trim()
-  const hostname = (url.searchParams.get('hostname') || '').trim()
 
-  if (!username || !hostname) {
+  if (!username) {
     return new Response('Bad Request', { status: 400, headers: { 'Content-Type': 'text/plain' } })
   }
 
   try {
     const row = await env.DB.prepare(
-      'SELECT brief_key, report_key, username, hostname FROM submissions WHERE id = ?'
+      'SELECT brief_key, report_key, username FROM submissions WHERE id = ?'
     ).bind(id).first()
 
     if (!row) return notFound()
 
-    // Ownership check — case-insensitive to handle Windows hostname/username casing
-    if (row.username.toLowerCase() !== username.toLowerCase() ||
-        row.hostname.toLowerCase() !== hostname.toLowerCase()) {
+    // Ownership check — case-insensitive to handle Windows username casing
+    if (row.username.toLowerCase() !== username.toLowerCase()) {
       return notFound()
     }
 
@@ -40,11 +38,10 @@ export async function handleUserReport(request, env, id, type) {
       const safeId      = id.replace(/[^a-zA-Z0-9\-_]/g, '')
       const reportOrigin = new URL(request.url).origin
       const encodedUser = encodeURIComponent(username)
-      const encodedHost = encodeURIComponent(hostname)
 
       const script = `<script>
 function _rcViewFull(){
-  fetch('${reportOrigin}/ratcatcher/api/user-report/${safeId}/full?username=${encodedUser}&hostname=${encodedHost}')
+  fetch('${reportOrigin}/ratcatcher/api/user-report/${safeId}/full?username=${encodedUser}')
     .then(function(r){return r.ok?r.blob():Promise.reject(r.status)})
     .then(function(b){window.open(URL.createObjectURL(b),'_blank')})
     .catch(function(e){alert('Failed to load report ('+e+')')})

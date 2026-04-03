@@ -540,9 +540,8 @@ export async function handleExport(request, env) {
 export async function handleUserSubmissions(request, env) {
   const url      = new URL(request.url)
   const username = (url.searchParams.get('username') || '').trim()
-  const hostname = (url.searchParams.get('hostname') || '').trim()
 
-  if (!username || !hostname) return json({ error: 'Missing parameters' }, 400)
+  if (!username) return json({ error: 'Missing parameters' }, 400)
 
   const page   = Math.max(1, parseInt(url.searchParams.get('page')  || '1',  10) || 1)
   const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 1))
@@ -550,8 +549,8 @@ export async function handleUserSubmissions(request, env) {
 
   try {
     const countRow = await env.DB.prepare(
-      'SELECT COUNT(*) AS total FROM submissions WHERE LOWER(username) = LOWER(?) AND LOWER(hostname) = LOWER(?)'
-    ).bind(username, hostname).first()
+      'SELECT COUNT(*) AS total FROM submissions WHERE LOWER(username) = LOWER(?)'
+    ).bind(username).first()
     const total = countRow?.total ?? 0
 
     if (!total) return json({ error: 'Not found' }, 404)
@@ -576,10 +575,10 @@ export async function handleUserSubmissions(request, env) {
       LEFT JOIN (
         SELECT submission_id, COUNT(*) AS threat_count FROM finding_acknowledgements WHERE is_threat = 1 GROUP BY submission_id
       ) tc ON s.id = tc.submission_id
-      WHERE LOWER(s.username) = LOWER(?) AND LOWER(s.hostname) = LOWER(?)
+      WHERE LOWER(s.username) = LOWER(?)
       ORDER BY s.submitted_at DESC
       LIMIT ? OFFSET ?
-    `).bind(username, hostname, limit, offset).all()
+    `).bind(username, limit, offset).all()
 
     return json({ total, page, limit, submissions: rows.results })
   } catch {
