@@ -54,7 +54,7 @@ function New-ExecBriefing {
 
     $verdictLabel = switch ($AiVerdict) {
         'AI_COMPROMISE'     { 'AI VERIFIED COMPROMISE' }
-        'AI_FALSE_POSITIVE' { 'AI VERIFIED FALSE POSITIVE' }
+        'AI_FALSE_POSITIVE' { 'AI Verified RAT Free!' }
         'AI_CLEAN'          { 'AI VERIFIED CLEAN' }
         default             { if ($overallClean) { 'CLEAN' } else { 'COMPROMISED' } }
     }
