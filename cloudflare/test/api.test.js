@@ -198,6 +198,44 @@ describe('handleSubmissions', () => {
   })
 })
 
+describe('handleSubmissions — ai_verdict derived fields', () => {
+  function makeEnvWithRow(row) {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn()
+      .mockReturnValueOnce({ first: vi.fn().mockResolvedValue({ total: 1 }) })
+      .mockReturnValueOnce({
+        bind: vi.fn(() => ({
+          all: vi.fn().mockResolvedValue({ results: [row] })
+        }))
+      })
+    return env
+  }
+
+  it('returns positive=1 for AI_COMPROMISE row', async () => {
+    const env = makeEnvWithRow({
+      id: 'x', hostname: 'H', username: 'u', submitted_at: '2026-04-01T12:00:00Z',
+      verdict: 'COMPROMISED', ai_verdict: 'AI_COMPROMISE',
+      positive: 1, reviewed: 0, is_latest: 1
+    })
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    const body = await res.json()
+    expect(body.submissions[0].positive).toBe(1)
+    expect(body.submissions[0].reviewed).toBe(0)
+  })
+
+  it('returns reviewed=1 for AI_FALSE_POSITIVE row', async () => {
+    const env = makeEnvWithRow({
+      id: 'y', hostname: 'H', username: 'u', submitted_at: '2026-04-01T12:00:00Z',
+      verdict: 'COMPROMISED', ai_verdict: 'AI_FALSE_POSITIVE',
+      positive: 0, reviewed: 1, is_latest: 1
+    })
+    const res = await handleSubmissions(get('/ratcatcher/api/submissions'), env)
+    const body = await res.json()
+    expect(body.submissions[0].reviewed).toBe(1)
+    expect(body.submissions[0].positive).toBe(0)
+  })
+})
+
 // ── /api/stats ──────────────────────────────────────────────────────────────
 
 describe('handleStats', () => {
@@ -232,6 +270,27 @@ describe('handleStats', () => {
     env.DB.prepare = vi.fn(() => ({ first: vi.fn().mockRejectedValue(new Error('DB down')) }))
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     expect(res.status).toBe(500)
+  })
+})
+
+describe('handleStats — ai_verdict logic', () => {
+  it('returns correct positive/reviewed/compromised counts based on ai_verdict', async () => {
+    const env = makeEnv()
+    env.DB.prepare = vi.fn(() => ({
+      first: vi.fn().mockResolvedValue({
+        total: 3,
+        clean: 0,
+        positive: 1,
+        reviewed: 1,
+        compromised: 1
+      })
+    }))
+    const res = await handleStats(get('/ratcatcher/api/stats'), env)
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.positive).toBe(1)
+    expect(body.reviewed).toBe(1)
+    expect(body.compromised).toBe(1)
   })
 })
 
