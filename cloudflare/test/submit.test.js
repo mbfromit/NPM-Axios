@@ -144,4 +144,34 @@ describe('handleSubmit', () => {
     const res = await handleSubmit(req, env)
     expect(res.status).toBe(500)
   })
+
+  it('stores ai_verdict when provided with a valid value', async () => {
+    const env = makeEnv()
+    const capturedBindArgs = []
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn((...args) => {
+        capturedBindArgs.push(...args)
+        return { run: vi.fn().mockResolvedValue({ success: true }) }
+      })
+    }))
+    const req = makeRequest(makeForm({ ai_verdict: 'AI_COMPROMISE', verdict: 'COMPROMISED' }))
+    const res = await handleSubmit(req, env)
+    expect(res.status).toBe(201)
+    expect(capturedBindArgs).toContain('AI_COMPROMISE')
+  })
+
+  it('stores null ai_verdict when field is omitted', async () => {
+    const env = makeEnv()
+    const capturedBindArgs = []
+    env.DB.prepare = vi.fn(() => ({
+      bind: vi.fn((...args) => {
+        capturedBindArgs.push(...args)
+        return { run: vi.fn().mockResolvedValue({ success: true }) }
+      })
+    }))
+    const req = makeRequest(makeForm()) // no ai_verdict field
+    const res = await handleSubmit(req, env)
+    expect(res.status).toBe(201)
+    expect(capturedBindArgs).toContain(null) // ai_verdict is null
+  })
 })
