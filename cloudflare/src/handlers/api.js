@@ -220,6 +220,8 @@ function _rcViewFull(){
 .rc-modal.threat .rc-modal-save{background:#da3633;border-color:#f85149}
 .rc-modal.threat .rc-modal-save:hover{background:#f85149}
 .rc-modal.threat textarea:focus{border-color:#f85149}
+.rc-modal-save-threat{background:#da3633;border-color:#f85149}
+.rc-modal-save-threat:hover{background:#f85149}
 .rc-ack-actions{display:flex;gap:10px;margin-top:5px}
 .rc-ack-edit{background:none;border:none;padding:0;cursor:pointer;font-family:'Consolas',monospace;font-size:10px;letter-spacing:1px;color:#58a6ff}
 .rc-ack-edit:hover{text-decoration:underline}
@@ -243,56 +245,68 @@ function _rcViewFull(){
     +'<p id="rc-m-desc">Provide a reason why this finding is benign or not applicable. Be specific — this record is kept for audit purposes.</p>'
     +'<textarea id="rc-m-reason" placeholder="e.g. .NET shadow copy cache from Solutions clinical app — not RAT-related. Verified by jsmith 2026-04-02."></textarea>'
     +'<div class="rc-modal-err" id="rc-m-err"></div>'
-    +'<div class="rc-modal-btns">'
+    +'<div class="rc-modal-btns" id="rc-m-btns-normal">'
     +'<button class="rc-modal-cancel" id="rc-m-cancel">Cancel</button>'
     +'<button class="rc-modal-save" id="rc-m-save">Save Acknowledgement</button>'
+    +'</div>'
+    +'<div class="rc-modal-btns" id="rc-m-btns-edit" style="display:none;flex-wrap:wrap;gap:8px">'
+    +'<button class="rc-modal-cancel" id="rc-m-cancel2">Cancel</button>'
+    +'<button class="rc-modal-save" id="rc-m-save-ack">&#10003; Save as Acknowledged</button>'
+    +'<button class="rc-modal-save rc-modal-save-threat" id="rc-m-save-threat">&#9888; Save as Confirmed Threat</button>'
     +'</div></div>';
   document.body.appendChild(overlay);
 
   var currentHash=null,currentEl=null,currentThreat=false;
-  document.getElementById('rc-m-cancel').onclick=function(){overlay.classList.remove('open')};
-  overlay.onclick=function(e){if(e.target===overlay)overlay.classList.remove('open')};
+  function closeModal(){overlay.classList.remove('open')}
+  document.getElementById('rc-m-cancel').onclick=closeModal;
+  document.getElementById('rc-m-cancel2').onclick=closeModal;
+  overlay.onclick=function(e){if(e.target===overlay)closeModal()};
   document.getElementById('rc-m-save').onclick=saveAck;
+  document.getElementById('rc-m-save-ack').onclick=function(){saveAck(false,this)};
+  document.getElementById('rc-m-save-threat').onclick=function(){saveAck(true,this)};
 
   function openModal(hash,el,pathText,isThreat,prefill){
     currentHash=hash;currentEl=el;currentThreat=!!isThreat;
-    var dlg=document.getElementById('rc-m-dialog');
-    dlg.className=isThreat?'rc-modal threat':'rc-modal';
     var isEdit=!!prefill;
-    document.getElementById('rc-m-title').textContent=isEdit?(isThreat?'EDIT \u2014 CONFIRM THREAT':'EDIT ACKNOWLEDGEMENT'):(isThreat?'CONFIRM THREAT':'ACKNOWLEDGE FINDING');
-    document.getElementById('rc-m-desc').textContent=isThreat
-      ?'Describe the confirmed threat. This will flag the submission as POSITIVE FINDING on the dashboard.'
-      :'Provide a reason why this finding is benign or not applicable. Be specific \u2014 this record is kept for audit purposes.';
-    document.getElementById('rc-m-save').textContent=isEdit?'Save Changes':(isThreat?'Confirm Threat':'Save Acknowledgement');
+    var dlg=document.getElementById('rc-m-dialog');
+    dlg.className=isEdit?'rc-modal':(isThreat?'rc-modal threat':'rc-modal');
+    document.getElementById('rc-m-title').textContent=isEdit?'EDIT FINDING':(isThreat?'CONFIRM THREAT':'ACKNOWLEDGE FINDING');
+    document.getElementById('rc-m-desc').textContent=isEdit
+      ?'Update the reason, then choose Save as Acknowledged or Save as Confirmed Threat.'
+      :(isThreat?'Describe the confirmed threat. This will flag the submission as POSITIVE FINDING on the dashboard.':'Provide a reason why this finding is benign or not applicable. Be specific \u2014 this record is kept for audit purposes.');
     document.getElementById('rc-m-reason').placeholder=isThreat
       ?'e.g. Confirmed RAT beacon — C2 callback to 185.x.x.x on port 443. Escalated to IR team.'
       :'e.g. .NET shadow copy cache from Solutions clinical app \u2014 not RAT-related. Verified by jsmith 2026-04-02.';
     document.getElementById('rc-m-path').textContent=pathText;
     document.getElementById('rc-m-reason').value=prefill||'';
     document.getElementById('rc-m-err').textContent='';
-    document.getElementById('rc-m-save').onclick=saveAck;
+    if(!isEdit)document.getElementById('rc-m-save').textContent=isThreat?'Confirm Threat':'Save Acknowledgement';
+    document.getElementById('rc-m-btns-normal').style.display=isEdit?'none':'';
+    document.getElementById('rc-m-btns-edit').style.display=isEdit?'flex':'none';
     overlay.classList.add('open');
     setTimeout(function(){document.getElementById('rc-m-reason').focus()},50);
   }
 
-  function saveAck(){
+  function saveAck(isThreatOverride,saveBtnEl){
+    var isThreat=(isThreatOverride!==undefined)?!!isThreatOverride:currentThreat;
     var reason=document.getElementById('rc-m-reason').value.trim();
     if(!reason){document.getElementById('rc-m-err').textContent='Reason is required.';return;}
-    var saveBtn=document.getElementById('rc-m-save');
+    var saveBtn=saveBtnEl||document.getElementById('rc-m-save');
+    var origText=saveBtn.textContent;
     saveBtn.disabled=true;
     saveBtn.textContent='Saving...';
     fetch(B+'/api/submissions/'+SUB+'/acks',{
       method:'POST',
       headers:getHeaders(),
-      body:JSON.stringify({finding_hash:currentHash,reason:reason,is_threat:currentThreat})
+      body:JSON.stringify({finding_hash:currentHash,reason:reason,is_threat:isThreat})
     })
     .then(function(r){return r.json().then(function(b){return{status:r.status,body:b}})})
     .then(function(res){
       saveBtn.disabled=false;
-      saveBtn.textContent=currentThreat?'Confirm Threat':'Save Acknowledgement';
+      saveBtn.textContent=origText;
       if(res.status===200||res.status===201||res.status===409){
-        overlay.classList.remove('open');
-        markDone(currentEl,reason,res.body.acknowledged_at||new Date().toISOString(),currentThreat,currentHash);
+        closeModal();
+        markDone(currentEl,reason,res.body.acknowledged_at||new Date().toISOString(),isThreat,currentHash);
       } else {
         document.getElementById('rc-m-err').textContent=res.body.error||'Save failed.';
       }
@@ -300,7 +314,7 @@ function _rcViewFull(){
     .catch(function(err){
       console.error('[RatCatcher ack]',err);
       saveBtn.disabled=false;
-      saveBtn.textContent=currentThreat?'Confirm Threat':'Save Acknowledgement';
+      saveBtn.textContent=origText;
       document.getElementById('rc-m-err').textContent='Network error \u2014 please try again.';
     });
   }
