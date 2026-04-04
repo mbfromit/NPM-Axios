@@ -2,6 +2,7 @@ import { handleSubmit }                                    from './handlers/subm
 import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission, handleExport } from './handlers/api.js'
 import { handleDashboard }                                 from './handlers/dashboard.js'
 import { handleGetAcks, handlePostAck, handleUpdateFindingsCount } from './handlers/ack.js'
+import { handleAiVerify, handleGetAiVerdicts, handleAiVerifyAll, handleAiStatus, handleAiWarmup } from './handlers/ai-verify.js'
 
 export default {
   async fetch(request, env, ctx) {
@@ -37,12 +38,31 @@ export default {
       return new Response('Method Not Allowed', { status: 405 })
     }
 
+    const aiVerifyMatch = rel.match(/^\/api\/submissions\/([^/]+)\/ai-verify$/)
+    if (aiVerifyMatch && method === 'POST') {
+      return handleAiVerify(request, env, aiVerifyMatch[1])
+    }
+
+    const aiVerdictsMatch = rel.match(/^\/api\/submissions\/([^/]+)\/ai-verdicts$/)
+    if (aiVerdictsMatch && method === 'GET') {
+      return handleGetAiVerdicts(request, env, aiVerdictsMatch[1])
+    }
+
+    if (rel === '/api/ai-verify-all' && method === 'POST') {
+      return handleAiVerifyAll(request, env, ctx)
+    }
+
+    if (rel === '/api/ai-warmup' && method === 'POST') {
+      return handleAiWarmup(request, env)
+    }
+
     if (method !== 'GET') return new Response('Method Not Allowed', { status: 405 })
 
     if (rel === '/dashboard')        return handleDashboard(request, env)
     if (rel === '/api/submissions')  return handleSubmissions(request, env)
     if (rel === '/api/stats')        return handleStats(request, env)
     if (rel === '/api/export')       return handleExport(request, env)
+    if (rel === '/api/ai-status')    return handleAiStatus(request, env)
 
     const reportMatch = rel.match(/^\/api\/report\/([^/]+)\/(brief|full)$/)
     if (reportMatch) return handleReport(request, env, reportMatch[1], reportMatch[2])

@@ -31,10 +31,6 @@ export async function handleSubmit(request, env) {
     }
   }
 
-  const validAiVerdicts = ['AI_COMPROMISE', 'AI_FALSE_POSITIVE', 'AI_CLEAN']
-  const rawAiVerdict = formData.get('ai_verdict')
-  const aiVerdict = validAiVerdicts.includes(rawAiVerdict) ? rawAiVerdict : null
-
   const briefFile  = formData.get('brief')
   const reportFile = formData.get('report')
   if (!briefFile || !reportFile) {
@@ -65,9 +61,8 @@ export async function handleSubmit(request, env) {
     await env.DB.prepare(`
       INSERT INTO submissions
         (id, hostname, username, submitted_at, scan_timestamp, duration, verdict,
-         projects_scanned, vulnerable_count, critical_count, paths_scanned, brief_key, report_key,
-         ai_verdict)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         projects_scanned, vulnerable_count, critical_count, paths_scanned, brief_key, report_key)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       formData.get('hostname'),
@@ -81,8 +76,7 @@ export async function handleSubmit(request, env) {
       toInt(formData.get('critical_count')),
       formData.get('paths_scanned') || null,
       briefKey,
-      reportKey,
-      aiVerdict
+      reportKey
     ).run()
   } catch {
     // R2 cleanup: don't leave orphaned objects if DB insert failed

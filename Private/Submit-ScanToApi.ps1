@@ -12,8 +12,7 @@ function Submit-ScanToApi {
         [int]$CriticalCount,
         [string]$PathsScanned,
         [string]$BriefPath,
-        [string]$ReportPath,
-        [string]$AiVerdict = ''
+        [string]$ReportPath
     )
 
     if ([string]::IsNullOrEmpty($Password)) {
@@ -42,7 +41,6 @@ function Submit-ScanToApi {
             critical_count   = [string]$CriticalCount
             paths_scanned    = $PathsScanned
         }
-        if ($AiVerdict) { $fields['ai_verdict'] = $AiVerdict }
 
         foreach ($key in $fields.Keys) {
             $parts.Add($enc.GetBytes(

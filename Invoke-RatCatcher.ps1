@@ -22,11 +22,8 @@ param(
     [string]$OutputPath     = $(if ($env:OS -eq 'Windows_NT') { 'C:\Logs' } else { '/tmp' }),
     [switch]$NoSubmit,
     [switch]$NonInteractive,
-    [switch]$NoVerify,
     [string]$SubmitPassword,
     [int]$Threads           = 4,
-    [string]$OllamaUrl      = 'http://192.168.1.203:11434',
-    [string]$OllamaModel    = 'gemma4:26b',
     # Test-artifact overrides — point at synthetic data without touching real npm cache or firewall log
     [string]$TestCacheDir,
     [string]$TestFirewallLogPath
@@ -50,7 +47,6 @@ $pvt = Join-Path $PSScriptRoot 'Private'
 . (Join-Path $pvt 'New-ScanLogHtml.ps1')
 . (Join-Path $pvt 'Send-ScanReport.ps1')
 . (Join-Path $pvt 'Submit-ScanToApi.ps1')
-. (Join-Path $pvt 'Invoke-FindingVerification.ps1')
 
 # Load logo for HTML reports (resize to ~600px to keep embedded size reasonable)
 $logoBase64 = ''
@@ -191,67 +187,6 @@ $neParams = @{}
 if ($TestFirewallLogPath) { $neParams['FirewallLogPath'] = $TestFirewallLogPath }
 $networkEvidence = @(Get-NetworkEvidence @neParams)
 
-# ── AI Verification: annotate findings via local LLM ─────────────────────────
-if (-not $NoVerify) {
-    Write-Log "[AI] Verifying findings against local LLM ($OllamaModel)..."
-    $verifyParams = @{ OllamaUrl = $OllamaUrl; Model = $OllamaModel }
-
-    $categoriesToVerify = @(
-        @{ Name = 'Forensic Artifacts';    Ref = 'artifacts' }
-        @{ Name = 'npm Cache';             Ref = 'cacheFindings' }
-        @{ Name = 'Dropped Payloads';      Ref = 'droppedPayloads' }
-        @{ Name = 'Persistence Artifacts'; Ref = 'persistenceArtifacts' }
-        @{ Name = 'XOR-Encoded C2';        Ref = 'xorFindings' }
-        @{ Name = 'Network Evidence';      Ref = 'networkEvidence' }
-    )
-
-    $totalVerified = 0
-
-    foreach ($cat in $categoriesToVerify) {
-        $findings = Get-Variable -Name $cat.Ref -ValueOnly
-        if (-not $findings -or $findings.Count -eq 0) { continue }
-        Write-Log "[AI] Verifying $($findings.Count) finding(s) in '$($cat.Name)'..."
-
-        $verifiedFindings = Invoke-FindingVerification `
-            -Findings $findings `
-            -FindingCategory $cat.Name `
-            @verifyParams
-
-        $totalVerified += $verifiedFindings.Count
-
-        foreach ($f in $verifiedFindings) {
-            Write-Log "[AI] $($f.AiVerdict): $($f.Type) — $($f.AiReason)" 'INFO'
-        }
-
-        # Write annotated findings back (all kept, just annotated)
-        Set-Variable -Name $cat.Ref -Value $verifiedFindings
-    }
-
-    Write-Log "[AI] Verification complete: $totalVerified finding(s) annotated with AI verdicts"
-} else {
-    Write-Log "[AI] LLM verification skipped (-NoVerify)"
-}
-
-# ── Compute aggregate AI verdict ──────────────────────────────────────────────
-$aiVerdict = $null
-if (-not $NoVerify) {
-    $allFindingsList = @($artifacts) + @($cacheFindings) + @($droppedPayloads) +
-                       @($persistenceArtifacts) + @($xorFindings) + @($networkEvidence)
-    if ($allFindingsList.Count -eq 0) {
-        $aiVerdict = 'AI_CLEAN'
-    } else {
-        $successfulVerdicts = @($allFindingsList | Where-Object { $_.AiVerdict -and $_.AiVerdict -ne 'Error' })
-        if ($successfulVerdicts.Count -gt 0) {
-            if ($successfulVerdicts | Where-Object { $_.AiVerdict -in 'Confirmed', 'Likely' }) {
-                $aiVerdict = 'AI_COMPROMISE'
-            } else {
-                $aiVerdict = 'AI_FALSE_POSITIVE'
-            }
-        }
-    }
-    Write-Log "[AI] Aggregate verdict: $(if ($aiVerdict) { $aiVerdict } else { 'null (all findings errored)' })"
-}
-
 # ── Check 9: Generate report ──────────────────────────────────────────────────
 $duration = (Get-Date) - $startTime
 $metadata = @{
@@ -274,8 +209,7 @@ $reportPath = New-ScanReport `
     -NetworkEvidence      $networkEvidence `
     -OutputPath           $OutputPath `
     -ScanMetadata         $metadata `
-    -LogoBase64           $logoBase64 `
-    -AiVerdict            $aiVerdict
+    -LogoBase64           $logoBase64
 
 Write-Log "Technical report: $reportPath"
 
@@ -300,8 +234,7 @@ $briefingPath = New-ExecBriefing `
     -LogHtmlPath          $logHtmlPath `
     -OutputPath           $OutputPath `
     -ScanMetadata         $metadata `
-    -LogoBase64           $logoBase64 `
-    -AiVerdict            $aiVerdict
+    -LogoBase64           $logoBase64
 
 Write-Log "Executive briefing: $briefingPath"
 
@@ -326,8 +259,7 @@ if (-not $NoSubmit) {
         -CriticalCount   $criticalCount `
         -PathsScanned    ($resolvedPaths | ConvertTo-Json -Compress) `
         -BriefPath       $briefingPath `
-        -ReportPath      $reportPath `
-        -AiVerdict       $aiVerdict
+        -ReportPath      $reportPath
 
     switch ($submitResult.Status) {
         'success'        { Write-Log "[INFO] Scan submitted successfully (ID: $($submitResult.Id))" }
