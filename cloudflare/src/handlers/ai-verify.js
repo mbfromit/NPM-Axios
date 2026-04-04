@@ -249,7 +249,7 @@ async function verifyOneFinding(finding, env) {
 /**
  * Verify all findings for a submission. Returns summary.
  */
-async function verifySubmissionFindings(submissionId, env) {
+export async function verifySubmissionFindings(submissionId, env) {
   // Get the report HTML from R2
   const row = await env.DB.prepare('SELECT report_key FROM submissions WHERE id = ?')
     .bind(submissionId).first()
@@ -260,6 +260,10 @@ async function verifySubmissionFindings(submissionId, env) {
 
   const html = await obj.text()
   const findings = extractFindings(html)
+
+  // Mark as pending so dashboard shows "AI Evaluating..."
+  await env.DB.prepare('UPDATE submissions SET ai_verdict = ? WHERE id = ?')
+    .bind('AI_PENDING', submissionId).run()
 
   if (findings.length === 0) {
     // No findings — mark as AI_CLEAN

@@ -31,11 +31,11 @@ function New-ExecBriefing {
     # Helpers: count AI verdicts in a category
     function Get-AiVerifiedCount($findings) {
         if (-not $findings) { return 0 }
-        @($findings | Where-Object { $_.AiVerdict -in @('Confirmed','Likely') }).Count
+        @($findings | Where-Object { $_.PSObject.Properties['AiVerdict'] -and $_.AiVerdict -in @('Confirmed','Likely') }).Count
     }
     function Get-AiClearedCount($findings) {
         if (-not $findings) { return 0 }
-        @($findings | Where-Object { $_.AiVerdict -in @('FalsePositive','Unlikely') }).Count
+        @($findings | Where-Object { $_.PSObject.Properties['AiVerdict'] -and $_.AiVerdict -in @('FalsePositive','Unlikely') }).Count
     }
 
     $checks = [ordered]@{

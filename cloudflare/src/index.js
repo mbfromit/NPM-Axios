@@ -18,7 +18,7 @@ export default {
 
     if (rel === '/submit') {
       if (method !== 'POST') return new Response('Method Not Allowed', { status: 405 })
-      return handleSubmit(request, env)
+      return handleSubmit(request, env, ctx)
     }
 
     const deleteMatch = rel.match(/^\/api\/submissions\/([^/]+)$/)

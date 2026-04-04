@@ -256,7 +256,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
   </div>
 </div>
 <script>
-function _vl(s){if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial  - Re-Evaluate';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
+function _vl(s){if(s.ai_verdict==='AI_PENDING')return'[...] AI Evaluating';if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial - Re-Evaluate';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
 const B=location.pathname.replace(/\\/dashboard$/,''),L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
@@ -290,7 +290,9 @@ async function loadRows(){
       tr.className=s.ai_verdict==='AI_FALSE_POSITIVE'?'ai-fp':s.verdict==='COMPROMISED'?'comp':'clean';
       const dt=new Date(s.submitted_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'});
       const ltag=s.is_latest?'<span class="latest">LATEST</span>':'';
-      const aiBtn=s.ai_verdict==='AI_PARTIAL'
+      const aiBtn=s.ai_verdict==='AI_PENDING'
+        ?'<span class="aibtn running" style="cursor:default">AI Evaluating...</span>'
+        :s.ai_verdict==='AI_PARTIAL'
         ?'<button class="aibtn" style="border-color:#e8a838;color:#e8a838" onclick="aiEval(&#39;'+esc(s.id)+'&#39;,this,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">&#9888; Re-Evaluate</button>'
         :s.ai_verdict
         ?'<span class="ai-done">&#10003; AI Reviewed</span>'

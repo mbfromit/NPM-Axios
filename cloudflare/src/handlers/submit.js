@@ -1,6 +1,7 @@
 import { json } from '../util.js'
+import { verifySubmissionFindings } from './ai-verify.js'
 
-export async function handleSubmit(request, env) {
+export async function handleSubmit(request, env, ctx) {
   // PowerShell's Invoke-RestMethod sends a quoted boundary (boundary="xxx") which
   // Cloudflare Workers' formData() cannot parse. When detected, buffer the entire
   // body into an ArrayBuffer and reconstruct the request with an unquoted boundary.
@@ -85,6 +86,11 @@ export async function handleSubmit(request, env) {
       await env.BUCKET.delete(reportKey)
     } catch { /* best-effort cleanup */ }
     return json({ error: 'Database failure' }, 500)
+  }
+
+  // Trigger AI verification in the background — don't block the response
+  if (env.AI_TUNNEL_URL && env.AI_API_KEY) {
+    ctx.waitUntil(verifySubmissionFindings(id, env).catch(() => {}))
   }
 
   return json({ id }, 201)

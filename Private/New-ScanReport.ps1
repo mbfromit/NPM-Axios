@@ -71,7 +71,8 @@ function New-ScanReport {
 
     function FindingCard($f, [string]$extra = '') {
         $cls  = switch ($f.Severity) { 'Critical' {'f-critical'} 'High' {'f-high'} 'Medium' {'f-medium'} default {'f-low'} }
-        $aiCls = switch ($f.AiVerdict) {
+        $aiV = if ($f.PSObject.Properties['AiVerdict']) { $f.AiVerdict } else { $null }
+        $aiCls = switch ($aiV) {
             'FalsePositive' { ' ai-dimmed' }
             'Unlikely'      { ' ai-dimmed' }
             'Confirmed'     { ' ai-verified' }
@@ -147,7 +148,8 @@ function New-ScanReport {
         ($PersistenceArtifacts | ForEach-Object {
             $pa = $_
             $cls = switch ($pa.Severity) { 'Critical' {'f-critical'} 'High' {'f-high'} 'Medium' {'f-medium'} default {'f-low'} }
-            $aiCls = switch ($pa.AiVerdict) { 'FalsePositive' {' ai-dimmed'} 'Unlikely' {' ai-dimmed'} 'Confirmed' {' ai-verified'} 'Likely' {' ai-verified'} default {''} }
+            $paAiV = if ($pa.PSObject.Properties['AiVerdict']) { $pa.AiVerdict } else { $null }
+            $aiCls = switch ($paAiV) { 'FalsePositive' {' ai-dimmed'} 'Unlikely' {' ai-dimmed'} 'Confirmed' {' ai-verified'} 'Likely' {' ai-verified'} default {''} }
             $aiRow = AiVerdictHtml $pa
             @"
 <div class="finding $cls$aiCls">
@@ -175,7 +177,8 @@ function New-ScanReport {
         ($NetworkEvidence | ForEach-Object {
             $ne = $_
             $cls = switch ($ne.Severity) { 'Critical' {'f-critical'} 'High' {'f-high'} 'Medium' {'f-medium'} default {'f-low'} }
-            $aiCls = switch ($ne.AiVerdict) { 'FalsePositive' {' ai-dimmed'} 'Unlikely' {' ai-dimmed'} 'Confirmed' {' ai-verified'} 'Likely' {' ai-verified'} default {''} }
+            $neAiV = if ($ne.PSObject.Properties['AiVerdict']) { $ne.AiVerdict } else { $null }
+            $aiCls = switch ($neAiV) { 'FalsePositive' {' ai-dimmed'} 'Unlikely' {' ai-dimmed'} 'Confirmed' {' ai-verified'} 'Likely' {' ai-verified'} default {''} }
             $aiRow = AiVerdictHtml $ne
             @"
 <div class="finding $cls$aiCls">
