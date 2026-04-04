@@ -30,7 +30,7 @@ function Search-XorEncodedC2 {
         ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
     }
 
-    $c2Indicators = @('sfrclak.com', '142.11.206.73')
+    $c2Indicators = @('sfrclak.com', 'callnrwise.com', '142.11.206.73')
     $findings     = [System.Collections.Generic.List[PSCustomObject]]::new()
     # Only scan file types that could plausibly carry an obfuscated payload
     $scanExts     = @('.exe', '.dll', '.bin', '.dat', '.ps1', '.js', '.vbs', '.bat', '.tmp', '.log')

@@ -1,13 +1,26 @@
-# RatCatcher
+# RatCatcher 2.0
 
-![RatCatcher](RatCatcher.png)
+![RatCatcher 2.0](RatCatcher2.png)
 
-A PowerShell forensic scanner for detecting evidence of the **March 31, 2026 Axios NPM supply chain attack**, which distributed a malicious `plain-crypto-js` dependency via compromised versions of the `axios` package (v1.14.1 and v0.30.4). RatCatcher runs ten checks covering the full compromise kill chain and produces both a detailed technical report and an executive briefing.
+An **AI-powered** PowerShell forensic scanner for detecting evidence of the **March 31, 2026 Axios NPM supply chain attack**, which distributed a malicious `plain-crypto-js` dependency via compromised versions of the `axios` package (v1.14.1 and v0.30.4). RatCatcher runs ten checks covering the full compromise kill chain, produces detailed reports, and **automatically evaluates every finding using Gemma 4 AI** to distinguish real threats from false positives.
 
 You can read more about the attack here: https://thehackernews.com/2026/03/axios-supply-chain-attack-pushes-cross.html
 
 ---
-NOTE: It is recommended that you stop and save all work before running.  This scan can take a very long time. 
+
+## What's New in v2.0
+
+- **Automatic AI Evaluation** - Every scan is automatically analysed by Gemma 4 AI. No manual steps needed - by the time you open the dashboard, the AI has already determined what is a real threat and what is a false positive.
+- **Manager Certification** - When AI confirms a compromise, a manager must review the findings and certify with their name before the case is closed. Creates an audit trail.
+- **AI Verdicts in Reports** - Technical Reports show AI assessments inline on each finding with colour-coded verdicts and reasoning.
+- **Updated Threat Intelligence** - AI uses the latest IOCs from Elastic Security Labs, Unit42, Microsoft, and Google Threat Intelligence, including the confirmed North Korean state actor attribution.
+- **Faster Scans** - Scanner skips non-development directories (media, drivers, VMs) to reduce scan time and false positives.
+- **Status Legend** - Built-in legend explaining every dashboard status badge.
+
+> **Note:** The original Copilot Agent workflow still works exactly as before. AI is an addition, not a replacement. You can use AI only, Copilot only, or both.
+
+---
+NOTE: It is recommended that you stop and save all work before running. This scan can take a very long time.
 ## Download and Install
 
 ### Prerequisites
@@ -197,8 +210,19 @@ Submits the scan results (verdict, finding counts, and report files) to the RatC
 |---|---|---|
 | `axios` v1.14.1 | npm package | Compromised release |
 | `axios` v0.30.4 | npm package | Compromised release |
+| `plain-crypto-js` v4.2.0 | npm package | Staging package (precursor) |
 | `plain-crypto-js` v4.2.1 | npm package | Malicious RAT-dropping dependency |
 | `e10b1fa84f1d6481625f741b69892780140d4e0e7769e7491e5f4d894c2e0e09` | SHA-256 | Known malicious `setup.js` |
-| `sfrclak.com` | Domain | Attacker C2 domain |
-| `142.11.206.73` | IP address | Attacker C2 server |
+| `617b67a8e1210e4fc87c92d1d1da45a2f311c08d26e89b12307cf583c900d101` | SHA-256 | Windows PowerShell RAT payload |
+| `92ff08773995ebc8d55ec4b8e1a225d0d1e51efa4ef88b8849d0071230c9645a` | SHA-256 | macOS C++ binary payload |
+| `fcb81618bb15edfdedfb638b4c08a2af9cac9ecfa551af135a8402bf980375cf` | SHA-256 | Linux Python RAT payload |
+| `sfrclak.com` | Domain | Primary C2 domain |
+| `callnrwise.com` | Domain | Secondary C2 domain |
+| `142.11.206.73` | IP address | C2 server |
 | `142.11.206.73:8000` | IP:Port | RAT beacon endpoint |
+| `mozilla/4.0 (compatible; msie 8.0; windows nt 5.1; trident/4.0)` | User-Agent | Spoofed UA used by all RAT variants |
+| `%TEMP%\6202033.ps1` | File path | Windows RAT payload temp location |
+| `%PROGRAMDATA%\wt.exe` | File path | Renamed PowerShell binary |
+| `%PROGRAMDATA%\system.bat` | File path | Windows persistence batch file |
+
+**Attribution:** UNC1069 / Sapphire Sleet (North Korean state actor) - confirmed by Google Threat Intelligence and Microsoft.

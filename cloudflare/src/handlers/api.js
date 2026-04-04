@@ -12,7 +12,7 @@ export async function handleSubmissions(request, env) {
   const filterVerdict = validVerdicts.includes(verdict) ? verdict : null
   const search = (url.searchParams.get('search') || '').trim()
   const reviewed = url.searchParams.get('reviewed')
-  const filterReviewed = reviewed === '1' || reviewed === '0' ? reviewed : null
+  const filterReviewed = reviewed === '1' || reviewed === '0' || reviewed === 'await' ? reviewed : null
   const positive = url.searchParams.get('positive')
 
   try {
@@ -22,6 +22,8 @@ export async function handleSubmissions(request, env) {
     if (search) { conditions.push('(hostname LIKE ? OR username LIKE ?)'); binds.push('%'+search+'%', '%'+search+'%') }
     if (positive === '1') {
       conditions.push("ai_verdict = 'AI_COMPROMISE'")
+    } else if (filterReviewed === 'await') {
+      conditions.push("ai_verdict = 'AI_COMPROMISE' AND certified_by IS NULL")
     } else if (filterReviewed === '1') {
       conditions.push("(ai_verdict = 'AI_FALSE_POSITIVE' OR (findings_count > 0 AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) >= findings_count AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id AND is_threat = 1) = 0))")
     } else if (filterReviewed === '0') {
@@ -44,7 +46,8 @@ export async function handleSubmissions(request, env) {
              THEN 1 ELSE 0 END AS reviewed
       FROM (
         SELECT id, hostname, username, submitted_at, verdict, ai_verdict, duration,
-               projects_scanned, vulnerable_count, critical_count, findings_count
+               projects_scanned, vulnerable_count, critical_count, findings_count,
+               certified_by, certified_at
         FROM submissions${where}
         ORDER BY submitted_at DESC
         LIMIT ? OFFSET ?
@@ -87,7 +90,8 @@ export async function handleStats(request, env) {
                    AND COALESCE(tc.threat_count, 0) = 0
                    AND (s.findings_count IS NULL OR s.findings_count = 0
                         OR COALESCE(ac.ack_count, 0) < s.findings_count)
-                 THEN 1 ELSE 0 END) AS compromised
+                 THEN 1 ELSE 0 END) AS compromised,
+        SUM(CASE WHEN ai_verdict = 'AI_COMPROMISE' AND certified_by IS NULL THEN 1 ELSE 0 END) AS awaiting_cert
       FROM submissions s
       LEFT JOIN (
         SELECT submission_id, COUNT(*) AS ack_count FROM finding_acknowledgements GROUP BY submission_id
@@ -98,11 +102,12 @@ export async function handleStats(request, env) {
     `).first()
 
     return json({
-      total:       row?.total       ?? 0,
-      clean:       row?.clean       ?? 0,
-      compromised: row?.compromised ?? 0,
-      reviewed:    row?.reviewed    ?? 0,
-      positive:    row?.positive    ?? 0
+      total:         row?.total         ?? 0,
+      clean:         row?.clean         ?? 0,
+      compromised:   row?.compromised   ?? 0,
+      reviewed:      row?.reviewed      ?? 0,
+      positive:      row?.positive      ?? 0,
+      awaiting_cert: row?.awaiting_cert ?? 0
     })
   } catch {
     return json({ error: 'Database error' }, 500)
@@ -116,7 +121,7 @@ export async function handleReport(request, env, id, type) {
 
   try {
     const row = await env.DB.prepare(
-      'SELECT brief_key, report_key, findings_count FROM submissions WHERE id = ?'
+      'SELECT brief_key, report_key, findings_count, ai_verdict, certified_by, certified_at FROM submissions WHERE id = ?'
     ).bind(id).first()
 
     if (!row) return notFound()
@@ -474,8 +479,145 @@ function _rcViewFull(){
 })();
 <\/script>`
 
-      html = html.replace('</head>', ackStyles + '</head>')
-      html = html.replace('</body>', ackScript + '</body>')
+      const aiVerdictStyles = `<style>
+.rc-ai-verdict{display:flex;align-items:flex-start;gap:8px;margin-top:10px;padding:8px 10px;border-radius:3px;font-family:'Consolas',monospace}
+.rc-ai-verdict.ai-threat{background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25)}
+.rc-ai-verdict.ai-clean{background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.25)}
+.rc-ai-verdict.ai-error{background:rgba(227,174,162,.08);border:1px solid rgba(227,174,162,.25)}
+.rc-ai-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.rc-ai-verdict.ai-threat .rc-ai-icon{color:#f85149}
+.rc-ai-verdict.ai-clean .rc-ai-icon{color:#3fb950}
+.rc-ai-verdict.ai-error .rc-ai-icon{color:#e8a838}
+.rc-ai-info{display:flex;flex-direction:column;gap:2px}
+.rc-ai-label{font-size:10px;font-weight:700;letter-spacing:1px}
+.rc-ai-verdict.ai-threat .rc-ai-label{color:#f85149}
+.rc-ai-verdict.ai-clean .rc-ai-label{color:#3fb950}
+.rc-ai-verdict.ai-error .rc-ai-label{color:#e8a838}
+.rc-ai-reason{font-size:11px;color:#8b949e;word-break:break-word}
+</style>`
+
+      const aiVerdictScript = `<script>
+(function(){
+  var SUB='${safeId}',B='${reportOrigin}${basePath}',PW='${reportPw}';
+  function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  fetch(B+'/api/submissions/'+SUB+'/ai-verdicts',{headers:{'X-Admin-Password':PW}})
+    .then(function(r){return r.ok?r.json():Promise.resolve({verdicts:[]})})
+    .then(function(data){
+      var verdicts=data.verdicts||[];
+      if(!verdicts.length)return;
+      var findings=document.querySelectorAll('.finding');
+      for(var i=0;i<findings.length&&i<verdicts.length;i++){
+        var v=verdicts[i];
+        var cls='ai-clean';
+        var icon='&#10003;';
+        var label='AI: FALSE POSITIVE';
+        if(v.verdict==='Confirmed'||v.verdict==='Likely'){
+          cls='ai-threat';icon='&#9888;';
+          label=v.verdict==='Confirmed'?'AI: CONFIRMED THREAT':'AI: LIKELY THREAT';
+        } else if(v.verdict==='Unlikely'){
+          cls='ai-clean';label='AI: UNLIKELY';
+        } else if(v.verdict==='TimedOut'||v.verdict==='Error'){
+          cls='ai-error';icon='&#8635;';label='AI: '+v.verdict.toUpperCase();
+        }
+        var el=document.createElement('div');
+        el.className='rc-ai-verdict '+cls;
+        el.innerHTML='<span class="rc-ai-icon">'+icon+'</span><div class="rc-ai-info"><span class="rc-ai-label">'+label+'</span>'
+          +(v.reason?'<span class="rc-ai-reason">'+esc(v.reason)+'</span>':'')+'</div>';
+        // Insert before ack buttons if present, otherwise append
+        var ackBtns=findings[i].querySelector('.rc-ack-btns');
+        var ackDone=findings[i].querySelector('.rc-ack-done');
+        if(ackBtns)findings[i].insertBefore(el,ackBtns);
+        else if(ackDone)findings[i].insertBefore(el,ackDone);
+        else findings[i].appendChild(el);
+      }
+    })
+    .catch(function(e){console.error('[RatCatcher AI verdicts]',e)});
+})();
+<\/script>`
+
+      let certStyles = ''
+      let certScript = ''
+      if (row.ai_verdict === 'AI_COMPROMISE') {
+        certStyles = `<style>
+.rc-cert-bar{background:#1a1a1a;border:2px solid #5f2a2a;border-radius:6px;padding:16px 20px;margin:16px 20px;font-family:'Consolas',monospace;display:flex;align-items:center;gap:16px}
+.rc-cert-bar.certified{border-color:#238636}
+.rc-cert-icon{font-size:24px}
+.rc-cert-info{flex:1}
+.rc-cert-title{font-size:13px;font-weight:bold;letter-spacing:1px;margin-bottom:4px}
+.rc-cert-bar:not(.certified) .rc-cert-title{color:#f85149}
+.rc-cert-bar.certified .rc-cert-title{color:#3fb950}
+.rc-cert-desc{font-size:11px;color:#8b949e;line-height:1.5}
+.rc-cert-desc b{color:#c9d1d9}
+.rc-cert-sign{background:#da3633;border:1px solid #f85149;color:#fff;padding:8px 20px;font-family:'Consolas',monospace;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;letter-spacing:1px;white-space:nowrap}
+.rc-cert-sign:hover{background:#f85149}
+.rc-cert-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10002;align-items:center;justify-content:center}
+.rc-cert-overlay.open{display:flex}
+.rc-cert-modal{background:#0d1117;border:1px solid #21303f;border-radius:8px;padding:28px;width:440px;max-width:92vw;font-family:'Consolas',monospace}
+.rc-cert-modal h3{color:#f85149;font-size:13px;letter-spacing:2px;margin-bottom:16px}
+.rc-cert-modal p{color:#8b949e;font-size:12px;margin-bottom:14px;line-height:1.5}
+.rc-cert-modal input{width:100%;background:#06090f;border:1px solid #21303f;color:#c9d1d9;font-family:monospace;font-size:12px;padding:10px;border-radius:4px}
+.rc-cert-modal input:focus{outline:none;border-color:#f85149}
+.rc-cert-modal .rc-cert-err{color:#f85149;font-size:11px;min-height:16px;margin-top:6px}
+.rc-cert-modal .rc-cert-btns{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.rc-cert-modal .rc-cert-btns button{padding:6px 18px;font-family:monospace;font-size:12px;border-radius:3px;cursor:pointer}
+.rc-cert-cancel{background:none;border:1px solid #2a2a2a;color:#6e7681}
+.rc-cert-cancel:hover{border-color:#555;color:#ccc}
+.rc-cert-submit{background:#da3633;border:1px solid #f85149;color:#fff;font-weight:bold}
+.rc-cert-submit:hover{background:#f85149}
+</style>`
+
+        const certifiedBy = row.certified_by
+        const certifiedAt = row.certified_at
+        const isCertified = !!certifiedBy
+
+        const safeBy = isCertified ? escapeHtml(certifiedBy) : ''
+        const safeAt = isCertified ? escapeHtml(new Date(certifiedAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })) : ''
+
+        certScript = `<script>
+(function(){
+  var SUB='${safeId}',B='${reportOrigin}${basePath}',PW='${reportPw}';
+  var isCertified=${isCertified};
+  var bar=document.createElement('div');
+  bar.className=isCertified?'rc-cert-bar certified':'rc-cert-bar';
+  if(isCertified){
+    bar.innerHTML='<span class="rc-cert-icon">&#10003;</span><div class="rc-cert-info"><div class="rc-cert-title">MANAGER CERTIFIED</div><div class="rc-cert-desc">Certified by <b>${safeBy}</b> on ${safeAt}</div></div>';
+  } else {
+    bar.innerHTML='<span class="rc-cert-icon">&#9888;</span><div class="rc-cert-info"><div class="rc-cert-title">AI VERIFIED COMPROMISE - AWAITING MANAGER CERTIFICATION</div><div class="rc-cert-desc">Review all findings and AI verdicts below, then certify that you have reviewed this compromise and notified the affected employee to disconnect.</div></div><button class="rc-cert-sign" id="rc-cert-sign">Sign &amp; Certify</button>';
+  }
+  var sticky=document.querySelector('[style*="position:sticky"]');
+  if(sticky&&sticky.nextSibling)sticky.parentNode.insertBefore(bar,sticky.nextSibling);
+  else document.body.insertBefore(bar,document.body.firstChild);
+  if(!isCertified){
+    var ov=document.createElement('div');ov.className='rc-cert-overlay';
+    ov.innerHTML='<div class="rc-cert-modal"><h3>MANAGER CERTIFICATION</h3><p>I certify that I have reviewed this AI-verified compromise, communicated with the affected employee, and instructed them to disconnect.</p><input type="text" id="rc-cert-name" placeholder="Enter your first and last name"><div class="rc-cert-err" id="rc-cert-err"></div><div class="rc-cert-btns"><button class="rc-cert-cancel" id="rc-cert-cancel">Cancel</button><button class="rc-cert-submit" id="rc-cert-submit">Certify Verified</button></div></div>';
+    document.body.appendChild(ov);
+    document.getElementById('rc-cert-sign').addEventListener('click',function(){ov.classList.add('open');setTimeout(function(){document.getElementById('rc-cert-name').focus()},50)});
+    ov.addEventListener('click',function(e){if(e.target===ov)ov.classList.remove('open')});
+    document.getElementById('rc-cert-cancel').addEventListener('click',function(){ov.classList.remove('open')});
+    document.getElementById('rc-cert-submit').addEventListener('click',async function(){
+      var name=document.getElementById('rc-cert-name').value.trim();
+      if(!name){document.getElementById('rc-cert-err').textContent='Name is required.';return;}
+      if(name.indexOf(' ')===-1){document.getElementById('rc-cert-err').textContent='Please enter first and last name.';return;}
+      this.disabled=true;this.textContent='Certifying...';
+      try{
+        var r=await fetch(B+'/api/submissions/'+SUB+'/certify',{method:'POST',headers:{'X-Admin-Password':PW,'Content-Type':'application/json'},body:JSON.stringify({certified_by:name})});
+        var d=await r.json();
+        this.disabled=false;this.textContent='Certify Verified';
+        if(!r.ok){document.getElementById('rc-cert-err').textContent=d.error||'Certification failed.';return;}
+        ov.classList.remove('open');
+        bar.className='rc-cert-bar certified';
+        bar.innerHTML='<span class="rc-cert-icon">&#10003;</span><div class="rc-cert-info"><div class="rc-cert-title">MANAGER CERTIFIED</div><div class="rc-cert-desc">Certified by <b>'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</b> just now</div></div>';
+        try{if(window.opener&&window.opener.refresh)window.opener.refresh()}catch(e2){}
+        setTimeout(function(){window.close()},500);
+      }catch(e){this.disabled=false;this.textContent='Certify Verified';document.getElementById('rc-cert-err').textContent='Network error.';}
+    });
+  }
+})();
+<\/script>`
+      }
+
+      html = html.replace('</head>', ackStyles + aiVerdictStyles + certStyles + '</head>')
+      html = html.replace('</body>', ackScript + aiVerdictScript + certScript + '</body>')
     }
 
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })

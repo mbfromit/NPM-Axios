@@ -71,6 +71,24 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 .aibtn:disabled{opacity:0.5;cursor:default}
 .aibtn.running{border-color:#e8a838;color:#e8a838;animation:pulse 1.5s infinite}
 .ai-done{color:#3fb950;font-size:0.68rem;font-weight:bold;font-family:monospace}
+.cert-btn{background:none;border:1px solid #5f2a2a;color:#f85149;padding:3px 10px;cursor:pointer;font-family:monospace;font-size:0.72rem}
+.cert-btn:hover{border-color:#f85149;background:rgba(248,81,73,.08)}
+.cert-done{font-size:0.68rem;font-weight:bold;font-family:monospace;color:#3fb950}
+.await-review{color:#e8a838;font-size:0.68rem;font-weight:bold;font-family:monospace}
+.cert-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10002;align-items:center;justify-content:center}
+.cert-overlay.open{display:flex}
+.cert-modal{background:#0d1117;border:1px solid #21303f;border-radius:8px;padding:28px;width:440px;max-width:92vw}
+.cert-modal h3{color:#f85149;font-family:monospace;font-size:13px;letter-spacing:2px;margin-bottom:16px}
+.cert-modal p{color:#8b949e;font-size:12px;font-family:monospace;margin-bottom:14px;line-height:1.5}
+.cert-modal input{width:100%;background:#06090f;border:1px solid #21303f;color:#c9d1d9;font-family:monospace;font-size:12px;padding:10px;border-radius:4px}
+.cert-modal input:focus{outline:none;border-color:#f85149}
+.cert-modal .cert-err{color:#f85149;font-size:11px;min-height:16px;margin-top:6px;font-family:monospace}
+.cert-modal .cert-btns{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+.cert-modal .cert-btns button{padding:6px 18px;font-family:monospace;font-size:12px;border-radius:3px;cursor:pointer}
+.cert-cancel{background:none;border:1px solid #2a2a2a;color:#6e7681}
+.cert-cancel:hover{border-color:#555;color:#ccc}
+.cert-save{background:#da3633;border:1px solid #f85149;color:#fff;font-weight:bold}
+.cert-save:hover{background:#f85149}
 .ai-all-btn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-family:monospace}
 .ai-all-btn:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
 .ai-all-btn:disabled{opacity:0.5;cursor:default}
@@ -108,6 +126,20 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 .ai-summary .ai-s-counts{color:#8b949e;font-size:11px;font-family:monospace}
 .ai-modal .ai-close{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:8px 20px;font-family:monospace;font-size:12px;border-radius:4px;cursor:pointer;display:none}
 .ai-modal .ai-close:hover{background:#30363d;border-color:#484f58}
+.legend-btn{background:none;border:1px solid #2a3f5f;color:#58a6ff;font-family:monospace;font-size:0.72rem;padding:3px 10px;cursor:pointer;border-radius:3px;margin-bottom:20px;margin-left:8px}
+.legend-btn:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
+.legend-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:10001;align-items:center;justify-content:center}
+.legend-overlay.open{display:flex}
+.legend-modal{background:#0d1117;border:1px solid #21303f;border-radius:8px;padding:32px 36px;width:620px;max-width:94vw;max-height:85vh;overflow-y:auto;font-family:monospace;color:#c9d1d9;line-height:1.7}
+.legend-modal h2{color:#58a6ff;font-size:16px;letter-spacing:2px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #21262d}
+.legend-row{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid #161b22}
+.legend-row:last-child{border-bottom:none}
+.legend-badge{min-width:200px;font-size:12px;font-weight:bold;font-family:monospace}
+.legend-desc{font-size:11px;color:#8b949e;line-height:1.6}
+.legend-close{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:10px 24px;font-family:monospace;font-size:12px;border-radius:4px;cursor:pointer;margin-top:20px;display:block}
+.legend-close:hover{background:#30363d;border-color:#484f58}
+.vrd-help{color:#58a6ff;cursor:pointer;font-size:0.72rem;margin-left:4px;text-decoration:none}
+.vrd-help:hover{text-decoration:underline}
 .v2-banner{background:linear-gradient(90deg,#1f6feb 0%,#388bfd 100%);border:none;border-radius:6px;padding:12px 20px;margin-bottom:20px;cursor:pointer;display:flex;align-items:center;gap:14px;width:100%;text-align:left;font-family:monospace}
 .v2-banner:hover{opacity:0.9}
 .v2-banner .v2-tag{background:#fff;color:#1f6feb;font-size:10px;font-weight:bold;padding:3px 8px;border-radius:3px;letter-spacing:1px;white-space:nowrap}
@@ -163,13 +195,14 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
     <span class="v2-dismiss" onclick="event.stopPropagation();dismissBanner()">Got it</span>
   </button>
   <button class="v2-mini" id="v2mini" onclick="openWhatsNew()">&#9432; What's New in v2.0</button>
+  <button class="legend-btn" onclick="openLegend()">&#9432; Status Legend</button>
   <div class="stats">
     <div class="stat selected" id="f-all"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
     <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
     <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
     <div class="stat pos" id="f-pos"><div class="lbl">Positive Findings</div><div class="val" id="s-pos">-</div></div>
     <div class="stat rvw" id="f-reviewed"><div class="lbl">Reviewed</div><div class="val" id="s-reviewed">-</div></div>
-    <div class="stat nrvw" id="f-notrev"><div class="lbl">Not Reviewed</div><div class="val" id="s-notrev">-</div></div>
+    <div class="stat nrvw" id="f-await"><div class="lbl">Awaiting Review</div><div class="val" id="s-await">-</div></div>
   </div>
   <div class="search">
     <input type="text" id="srch" placeholder="Search hostname or username...">
@@ -179,17 +212,33 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
     <table>
       <thead><tr>
         <th>Submitted</th><th>Hostname</th><th>User</th>
-        <th>Duration</th><th>Verdict</th><th>Actions</th>
+        <th>Duration</th><th>Verdict <a class="vrd-help" onclick="openLegend()">?</a></th><th>Actions</th>
       </tr></thead>
       <tbody id="tb"></tbody>
     </table>
   </div>
   <div class="pager">
-    <button class="ai-all-btn" id="aiallbtn">&#129300; AI Evaluate All</button>
     <button class="xbtn" id="csvbtn">&#8615; Export CSV</button>
     <button class="pbtn" id="pp" disabled>&larr; Prev</button>
     <span class="pginfo" id="pgi"></span>
     <button class="pbtn" id="pn" disabled>Next &rarr;</button>
+  </div>
+</div>
+<div class="legend-overlay" id="legend-overlay">
+  <div class="legend-modal">
+    <h2>STATUS LEGEND</h2>
+    <div class="legend-row"><span class="legend-badge" style="color:#00ff41">[+] CLEAN</span><span class="legend-desc">No suspicious findings were detected during the scan. No action required.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#ff4444">[!] COMPROMISED</span><span class="legend-desc">One or more findings were flagged by the scanner. Does not necessarily mean the machine is infected - findings need review.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[...] AI Evaluating</span><span class="legend-desc">Gemma 4 AI is currently analysing the findings. Results will appear automatically within 30-60 seconds.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#ff4444">[!] AI Verified Compromise</span><span class="legend-desc">AI has confirmed one or more findings match known attack indicators. This requires manager review and certification.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">[~] AI Verified RAT Free!</span><span class="legend-desc">AI has determined all findings are false positives - normal system activity unrelated to the attack.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">[+] AI Verified Clean</span><span class="legend-desc">No findings to evaluate. The scan was clean.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[!] AI Partial - Re-Evaluate</span><span class="legend-desc">AI evaluation timed out on some findings. Click Re-Evaluate to retry. Findings that were evaluated are still available.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">Awaiting Manager Review</span><span class="legend-desc">AI confirmed a compromise but no manager has certified the finding yet. A manager must open the Technical Report, review the findings, and sign off.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">Certified by [Name]</span><span class="legend-desc">A manager has reviewed the AI-verified compromise, communicated with the affected employee, and certified the finding. The manager's name and timestamp are recorded for audit.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#f85149">POSITIVE FINDING</span><span class="legend-desc">At least one finding has been confirmed as a real threat, either by AI or manual review.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">REVIEWED</span><span class="legend-desc">All findings have been reviewed and acknowledged as false positives. No threats found.</span></div>
+    <button class="legend-close" onclick="document.getElementById('legend-overlay').classList.remove('open')">Close</button>
   </div>
 </div>
 <div class="wn-overlay" id="wn-overlay">
@@ -198,45 +247,76 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
     <p class="wn-dim">For All Managers and Security Reviewers</p>
 
     <h3>What Changed?</h3>
-    <p>RatCatcher 2.0 adds a built-in AI evaluation feature to the dashboard. Instead of copying findings into the O365 Copilot Agent manually, you can now click a single button and let the AI analyse all findings for you automatically.</p>
-    <div class="wn-highlight"><b class="wn-green">Everything you already know still works exactly the same.</b> The Technical Reports, the Acknowledge/Confirm Threat buttons, the Copilot Agent workflow, the dashboard filters - nothing has changed or been removed. This is purely an addition.</div>
+    <p>RatCatcher 2.0 adds <b class="wn-blue">automatic AI-powered finding verification</b>. When a scan is submitted, our AI (Gemma 4) analyses every finding immediately - no manual steps needed. By the time you open the dashboard, the AI has already determined what is a real threat and what is a false positive.</p>
+    <div class="wn-highlight"><b class="wn-green">Everything you already know still works exactly the same.</b> The Technical Reports, the Acknowledge/Confirm Threat buttons, the Copilot Agent workflow, the dashboard filters - nothing has changed or been removed. The AI is purely an addition.</div>
 
-    <h3>The New "AI Eval" Button</h3>
-    <p>When you log into the dashboard, you will see a new blue <b class="wn-blue">AI Eval</b> button on each scan row, and an <b class="wn-blue">AI Evaluate All</b> button at the bottom of the page.</p>
-
-    <h3>Evaluating a Single Scan</h3>
+    <h3>Automatic AI Evaluation</h3>
+    <p>Every scan is now automatically evaluated by AI as soon as it is submitted. You do not need to click anything - the AI works in the background. When you open the dashboard:</p>
     <ul>
-      <li>Click <b class="wn-blue">AI Eval</b> on any COMPROMISED scan row.</li>
-      <li>A modal window opens showing a live checklist: connecting to AI server, checking model, analysing findings.</li>
-      <li>Results appear colour-coded: <b class="wn-red">CONFIRMED THREAT</b> or <b class="wn-red">LIKELY THREAT</b> for real indicators, <b class="wn-green">FALSE POSITIVE</b> or <b class="wn-green">UNLIKELY</b> for normal activity.</li>
-      <li>Each result includes the AI's reasoning, explaining why it reached that conclusion.</li>
-      <li>Click <b>Save CSV Report</b> to download the results as a spreadsheet.</li>
+      <li><b class="wn-green">[~] AI Verified RAT Free!</b> - AI determined all findings are false positives. No action needed.</li>
+      <li><b class="wn-red">[!] AI Verified Compromise</b> - AI confirmed one or more real threats. Requires your review and certification.</li>
+      <li><b style="color:#e8a838">[...] AI Evaluating</b> - AI is still processing. Results appear automatically within 30-60 seconds.</li>
     </ul>
 
-    <h3>Evaluating All Unreviewed Scans at Once</h3>
+    <h3>Manager Certification (New)</h3>
+    <p>When AI confirms a compromise, the dashboard shows <b style="color:#e8a838">Awaiting Manager Review</b>. Here is what you do:</p>
     <ul>
-      <li>Click <b class="wn-blue">AI Evaluate All</b> at the bottom of the dashboard.</li>
-      <li>The modal processes each unreviewed COMPROMISED scan one at a time, grouped by hostname.</li>
-      <li>A summary shows the total number of threats found vs. clear scans.</li>
+      <li>Click <b class="wn-red">Review &amp; Certify</b> to open the Technical Report.</li>
+      <li>Review all findings and AI verdicts shown inline on each finding.</li>
+      <li>At the top of the report, click <b class="wn-red">Sign &amp; Certify</b>.</li>
+      <li>Enter your first and last name to certify that you have reviewed the compromise and notified the affected employee.</li>
+      <li>The report closes and the dashboard updates to show <b class="wn-green">Certified by [Your Name]</b>.</li>
     </ul>
+    <p>This creates an audit trail linking every confirmed threat to the manager who reviewed it.</p>
+
+    <h3>AI Verdicts in Technical Reports</h3>
+    <p>When you open a Technical Report, each finding now shows the AI's assessment directly:</p>
+    <ul>
+      <li><b class="wn-red">AI: CONFIRMED THREAT</b> - Finding matches a known attack indicator, with an explanation of why.</li>
+      <li><b class="wn-green">AI: FALSE POSITIVE</b> - Finding is normal system activity, with the AI's reasoning.</li>
+    </ul>
+    <p>The Acknowledge Finding and Confirm Threat buttons still work exactly as before - use them to record your final decision after reviewing the AI's assessment.</p>
+
+    <h3>Status Legend</h3>
+    <p>Click the <b class="wn-blue">Status Legend</b> button or the <b class="wn-blue">?</b> next to the Verdict column header to see a full explanation of every status badge and what action is required.</p>
+
+    <h3>Updated Threat Intelligence</h3>
+    <p>The AI now uses the latest threat intelligence from Elastic Security Labs, Unit42, Microsoft, and Google Threat Intelligence, including newly discovered IOCs, payload hashes, and the confirmed attribution to a North Korean state actor.</p>
+
+    <h3>Faster Scans</h3>
+    <p>The scanner now skips directories that cannot contain Node.js projects (media folders, drivers, virtual machines, etc.), reducing scan time significantly.</p>
 
     <h3>Do I Still Need to Use the Copilot Agent?</h3>
-    <div class="wn-highlight"><b>No, but you can if you prefer.</b> The original workflow described in the How-To guide still works exactly as before. You can use AI Eval only, Copilot only, or both for a second opinion.</div>
-    <p>The AI Eval button does not automatically acknowledge or confirm any findings. It only provides an assessment. <b>You still make the final decision</b> by clicking Acknowledge Finding or Confirm Threat in the Technical Report, just as before.</p>
+    <div class="wn-highlight"><b>No, but you can if you prefer.</b> The original workflow described in the How-To guide still works exactly as before. You can use AI only, Copilot only, or both for a second opinion. The AI does not automatically acknowledge or confirm findings - <b>you still make the final decision</b>.</div>
 
     <h3>Quick Comparison</h3>
     <table>
-      <tr><th></th><th>v1 (Copilot Workflow)</th><th>v2 (AI Eval Button)</th></tr>
-      <tr><td class="wn-dim">How it works</td><td>Copy finding, paste into Copilot, read response</td><td>Click AI Eval, read results in modal</td></tr>
-      <tr><td class="wn-dim">Time per finding</td><td>1-2 minutes (manual copy/paste)</td><td>10-30 seconds (automatic)</td></tr>
-      <tr><td class="wn-dim">Bulk evaluation</td><td>Paste multiple findings into Copilot chat</td><td>Click AI Evaluate All</td></tr>
-      <tr><td class="wn-dim">Downloadable report</td><td>No</td><td>Yes (CSV)</td></tr>
-      <tr><td class="wn-dim">Still need to Acknowledge/Confirm?</td><td>Yes</td><td>Yes</td></tr>
+      <tr><th></th><th>v1 (Manual)</th><th>v2 (AI-Powered)</th></tr>
+      <tr><td class="wn-dim">Finding evaluation</td><td>Copy/paste to Copilot</td><td>Automatic on submission</td></tr>
+      <tr><td class="wn-dim">Time to evaluate</td><td>1-2 min per finding</td><td>10-30 sec (automatic)</td></tr>
+      <tr><td class="wn-dim">Threat accountability</td><td>None</td><td>Manager certification with name</td></tr>
+      <tr><td class="wn-dim">AI verdicts in reports</td><td>No</td><td>Yes - inline on each finding</td></tr>
+      <tr><td class="wn-dim">Downloadable AI report</td><td>No</td><td>Yes (CSV)</td></tr>
+      <tr><td class="wn-dim">Status legend</td><td>No</td><td>Yes - built into dashboard</td></tr>
+      <tr><td class="wn-dim">Threat intelligence</td><td>Initial disclosure only</td><td>Latest from 4+ security vendors</td></tr>
       <tr><td class="wn-dim">Can I still use Copilot?</td><td>Yes</td><td>Yes - nothing removed</td></tr>
     </table>
 
     <p class="wn-dim">Questions? Contact the DevOps team.</p>
     <button class="wn-close" onclick="document.getElementById('wn-overlay').classList.remove('open')">Close</button>
+  </div>
+</div>
+<div class="cert-overlay" id="cert-overlay">
+  <div class="cert-modal">
+    <h3>MANAGER CERTIFICATION</h3>
+    <p>You are certifying that you have reviewed this AI-verified compromise, communicated with the affected employee, and instructed them to disconnect.</p>
+    <p style="color:#c9d1d9" id="cert-host"></p>
+    <input type="text" id="cert-name" placeholder="Enter your first and last name">
+    <div class="cert-err" id="cert-err"></div>
+    <div class="cert-btns">
+      <button class="cert-cancel" id="cert-cancel">Cancel</button>
+      <button class="cert-save" id="cert-save">Certify Verified</button>
+    </div>
   </div>
 </div>
 <div class="ai-overlay" id="ai-overlay">
@@ -257,6 +337,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 </div>
 <script>
 function _vl(s){if(s.ai_verdict==='AI_PENDING')return'[...] AI Evaluating';if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial - Re-Evaluate';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
+function _certBadge(s){if(s.ai_verdict!=='AI_COMPROMISE')return'';if(s.certified_by)return'<span class="cert-done"> &#10003; Certified by '+esc(s.certified_by)+'</span>';return'<span class="await-review"> &#9888; Awaiting Manager Review</span>';}
 const B=location.pathname.replace(/\\/dashboard$/,''),L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function fmtDur(d){if(!d)return'—';const s=parseFloat(d);if(isNaN(s))return d;const m=s/60;return m<1?'<1 min':Math.round(m)+' min'}
@@ -275,7 +356,7 @@ async function loadStats(){
     document.getElementById('s-comp').textContent=(d.compromised??0).toLocaleString();
     document.getElementById('s-pos').textContent=(d.positive??0).toLocaleString();
     document.getElementById('s-reviewed').textContent=(d.reviewed??0).toLocaleString();
-    document.getElementById('s-notrev').textContent=(d.compromised??0).toLocaleString();
+    document.getElementById('s-await').textContent=(d.awaiting_cert??0).toLocaleString();
   }catch(e){console.error('loadStats',e)}
 }
 async function loadRows(){
@@ -294,14 +375,13 @@ async function loadRows(){
         ?'<span class="aibtn running" style="cursor:default">AI Evaluating...</span>'
         :s.ai_verdict==='AI_PARTIAL'
         ?'<button class="aibtn" style="border-color:#e8a838;color:#e8a838" onclick="aiEval(&#39;'+esc(s.id)+'&#39;,this,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">&#9888; Re-Evaluate</button>'
-        :s.ai_verdict
-        ?'<span class="ai-done">&#10003; AI Reviewed</span>'
-        :'<button class="aibtn" onclick="aiEval(&#39;'+esc(s.id)+'&#39;,this,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">&#129300; AI Eval</button>';
+        :'';
       tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+ltag+'</td><td>'+esc(s.username)+'</td>'
         +'<td>'+esc(fmtDur(s.duration))+'</td>'
-        +'<td class="vrd">'+_vl(s)+(s.positive?'<span class="positive"> &#9888; POSITIVE FINDING</span>':s.reviewed?'<span class="reviewed"> &#10003; REVIEWED</span>':'')+'</td>'
+        +'<td class="vrd">'+_vl(s)+_certBadge(s)+(s.positive?'<span class="positive"> &#9888; POSITIVE FINDING</span>':s.reviewed?'<span class="reviewed"> &#10003; REVIEWED</span>':'')+'</td>'
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
         +' '+aiBtn
+        +(s.ai_verdict==='AI_COMPROMISE'&&!s.certified_by?' <button class="cert-btn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Review &amp; Certify</button>':'')
         +' <button class="dbtn" onclick="del(&#39;'+esc(s.id)+'&#39;,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">Delete</button></td>';
       tb.appendChild(tr);
     });
@@ -359,7 +439,7 @@ function setFilter(v,rv,pf){
   document.querySelectorAll('.stat').forEach(el=>el.classList.remove('selected'));
   if(pf)document.getElementById('f-pos').classList.add('selected');
   else if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
-  else if(rv==='0')document.getElementById('f-notrev').classList.add('selected');
+  else if(rv==='await')document.getElementById('f-await').classList.add('selected');
   else document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
   loadRows();
 }
@@ -368,7 +448,7 @@ document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN
 document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED','',''));
 document.getElementById('f-pos').addEventListener('click',()=>setFilter('','','1'));
 document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1',''));
-document.getElementById('f-notrev').addEventListener('click',()=>setFilter('COMPROMISED','0',''));
+document.getElementById('f-await').addEventListener('click',function(){setFilter('','await','')});
 let srchTimer=null;
 document.getElementById('srch').addEventListener('input',function(){
   clearTimeout(srchTimer);
@@ -637,6 +717,44 @@ document.getElementById('aiallbtn').addEventListener('click',async function(){
   }
   this.disabled=false;this.textContent='AI Evaluate All';
 });
+// -- Manager certification --
+var certSubId=null;
+function openCertify(id,hostname){
+  certSubId=id;
+  document.getElementById('cert-host').textContent='Submission: '+hostname;
+  document.getElementById('cert-name').value='';
+  document.getElementById('cert-err').textContent='';
+  document.getElementById('cert-overlay').classList.add('open');
+  setTimeout(function(){document.getElementById('cert-name').focus()},50);
+}
+document.getElementById('cert-cancel').addEventListener('click',function(){
+  document.getElementById('cert-overlay').classList.remove('open');
+});
+document.getElementById('cert-overlay').addEventListener('click',function(e){
+  if(e.target===this)this.classList.remove('open');
+});
+document.getElementById('cert-save').addEventListener('click',async function(){
+  var name=document.getElementById('cert-name').value.trim();
+  if(!name){document.getElementById('cert-err').textContent='Name is required.';return;}
+  if(name.indexOf(' ')===-1){document.getElementById('cert-err').textContent='Please enter first and last name.';return;}
+  this.disabled=true;this.textContent='Certifying...';
+  try{
+    var r=await fetch(B+'/api/submissions/'+certSubId+'/certify',{
+      method:'POST',
+      headers:{'X-Admin-Password':pw,'Content-Type':'application/json'},
+      body:JSON.stringify({certified_by:name})
+    });
+    var d=await r.json();
+    this.disabled=false;this.textContent='Certify Verified';
+    if(!r.ok){document.getElementById('cert-err').textContent=d.error||'Certification failed.';return;}
+    document.getElementById('cert-overlay').classList.remove('open');
+    await Promise.all([loadStats(),loadRows()]);
+  }catch(e){
+    this.disabled=false;this.textContent='Certify Verified';
+    document.getElementById('cert-err').textContent='Network error - please try again.';
+  }
+});
+function openLegend(){document.getElementById('legend-overlay').classList.add('open')}
 function openWhatsNew(){document.getElementById('wn-overlay').classList.add('open')}
 function dismissBanner(){
   document.getElementById('v2banner').style.display='none';

@@ -65,3 +65,30 @@ export async function handlePostAck(request, env, submissionId) {
     return json({ error: 'Database error' }, 500)
   }
 }
+
+export async function handleCertify(request, env, submissionId) {
+  if (!checkAdminPassword(request, env)) return json({ error: 'Unauthorized' }, 401)
+
+  let body
+  try { body = await request.json() } catch { return json({ error: 'Invalid JSON' }, 400) }
+
+  const name = (body?.certified_by || '').trim()
+  if (!name) return json({ error: 'Manager name is required' }, 400)
+  if (name.split(/\s+/).length < 2) return json({ error: 'Please enter first and last name' }, 400)
+
+  const now = new Date().toISOString()
+
+  try {
+    const row = await env.DB.prepare('SELECT ai_verdict FROM submissions WHERE id = ?')
+      .bind(submissionId).first()
+    if (!row) return json({ error: 'Submission not found' }, 404)
+    if (row.ai_verdict !== 'AI_COMPROMISE') return json({ error: 'Only AI-verified compromises require certification' }, 400)
+
+    await env.DB.prepare('UPDATE submissions SET certified_by = ?, certified_at = ? WHERE id = ?')
+      .bind(name, now, submissionId).run()
+
+    return json({ ok: true, certified_by: name, certified_at: now })
+  } catch {
+    return json({ error: 'Database error' }, 500)
+  }
+}

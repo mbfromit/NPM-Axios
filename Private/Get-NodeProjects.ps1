@@ -12,6 +12,8 @@ function Get-NodeProjects {
             Where-Object {
                 $fn = $_.FullName
                 if ($fn -match '[/\\]node_modules[/\\]') { return $false }
+                if ($fn -match '[/\\]\.(git|svn|hg|vs|idea|vscode)[/\\]') { return $false }
+                if ($fn -match '[/\\](bin|obj|dist|build|out|coverage|__pycache__)[/\\]') { return $false }
                 if ($ExcludePattern) {
                     foreach ($pat in $ExcludePattern) { if ($fn -match $pat) { return $false } }
                 }

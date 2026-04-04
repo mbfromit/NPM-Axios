@@ -31,7 +31,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Continue'
-$RatCatcherVersion = '1.1.0'
+$RatCatcherVersion = '2.0.0'
 
 $pvt = Join-Path $PSScriptRoot 'Private'
 . (Join-Path $pvt 'Get-NodeProjects.ps1')
@@ -58,9 +58,20 @@ if (Test-Path $logoFile) {
 
 # ── Resolve scan paths (expand drive roots, skip OS/system folders) ───────────
 $excludedTopLevel = @(
+    # OS and system
     'Windows', 'Program Files', 'Program Files (x86)',
     'ProgramData', 'Recovery', 'System Volume Information',
-    'MSOCache', 'OneDriveTemp', '$Recycle.Bin', 'Config.Msi'
+    'MSOCache', 'OneDriveTemp', '$Recycle.Bin', 'Config.Msi',
+    # Media and documents (never contain Node.js projects)
+    'Mp3s', 'WAVs', 'Videos', 'Music', 'Photos', 'Pictures',
+    # Virtual machines and large binaries
+    'VirtualMachines', 'VMs', 'Hyper-V',
+    # Hardware and drivers
+    'Intel', 'Dell', 'Drivers', 'AMD', 'NVIDIA',
+    # Logs and temp (scanned separately by checks 4-5)
+    'Logs', 'dumps', 'PerfLogs',
+    # Misc non-dev
+    'inetpub'
 )
 
 $resolvedPaths = [System.Collections.Generic.List[string]]::new()

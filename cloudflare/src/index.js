@@ -1,7 +1,7 @@
 import { handleSubmit }                                    from './handlers/submit.js'
 import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission, handleExport } from './handlers/api.js'
 import { handleDashboard }                                 from './handlers/dashboard.js'
-import { handleGetAcks, handlePostAck, handleUpdateFindingsCount } from './handlers/ack.js'
+import { handleGetAcks, handlePostAck, handleUpdateFindingsCount, handleCertify } from './handlers/ack.js'
 import { handleAiVerify, handleGetAiVerdicts, handleAiVerifyAll, handleAiStatus, handleAiWarmup } from './handlers/ai-verify.js'
 
 export default {
@@ -36,6 +36,11 @@ export default {
       if (method === 'GET')  return handleGetAcks(request, env, ackMatch[1])
       if (method === 'POST') return handlePostAck(request, env, ackMatch[1])
       return new Response('Method Not Allowed', { status: 405 })
+    }
+
+    const certifyMatch = rel.match(/^\/api\/submissions\/([^/]+)\/certify$/)
+    if (certifyMatch && method === 'POST') {
+      return handleCertify(request, env, certifyMatch[1])
     }
 
     const aiVerifyMatch = rel.match(/^\/api\/submissions\/([^/]+)\/ai-verify$/)

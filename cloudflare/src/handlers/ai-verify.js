@@ -82,7 +82,64 @@ REMEDIATION:
 - Remove "plain-crypto-js" from node_modules
 - Assume full compromise if artifacts found
 - Block egress to sfrclak.com
-- Audit CI/CD pipeline runs using affected versions`
+- Audit CI/CD pipeline runs using affected versions
+
+UPDATED INTELLIGENCE (as of April 4, 2026):
+
+ATTRIBUTION:
+Google Threat Intelligence Group attributed the attack to UNC1069, a North Korea-nexus financially motivated threat actor. Microsoft Threat Intelligence independently attributed it to Sapphire Sleet, a North Korean state actor. Attribution is now confirmed with high confidence.
+
+ADDITIONAL C2 INFRASTRUCTURE:
+- Secondary C2 Domain: callnrwise[.]com
+- C2 Endpoint path: /6202033
+- All C2 traffic uses port 8000 over HTTP POST
+
+PAYLOAD HASHES (SHA-256):
+- Windows PowerShell RAT (6202033.ps1): 617b67a8e1210e4fc87c92d1d1da45a2f311c08d26e89b12307cf583c900d101
+- macOS C++ binary (com.apple.act.mond): 92ff08773995ebc8d55ec4b8e1a225d0d1e51efa4ef88b8849d0071230c9645a
+- Linux Python RAT (ld.py): fcb81618bb15edfdedfb638b4c08a2af9cac9ecfa551af135a8402bf980375cf
+- Additional hashes from Unit42: ad8ba560ae5c4af4758bc68cc6dcf43bae0e0bbf9da680a8dc60a9ef78e22ff7, cdc05cd30eb53315dadb081a7b942bb876f0d252d20e8ed4d2f36be79ee691fa, 8449341ddc3f7fcc2547639e21e704400ca6a8a6841ae74e57c04445b1276a10, 01c9484abc948daa525516464785009d1e7a63ffd6012b9e85b56477acc3e624
+
+ADDITIONAL MALICIOUS PACKAGES:
+- plain-crypto-js@4.2.0 (precursor — published March 30 as staging package)
+- plain-crypto-js@4.2.1 (active malware dropper)
+
+ADDITIONAL FILE ARTIFACTS:
+- Windows temp payload: %TEMP%\\6202033.ps1
+- Windows renamed PowerShell: %PROGRAMDATA%\\wt.exe
+- Windows persistence batch: %PROGRAMDATA%\\system.bat
+
+SPOOFED USER-AGENT (all platforms):
+mozilla/4.0 (compatible; msie 8.0; windows nt 5.1; trident/4.0)
+This anachronistic IE8 user-agent is a strong detection indicator — no legitimate modern software uses this string.
+
+RAT COMMAND SET (identical across all platforms):
+- kill: Self-termination
+- runscript: Execute scripts via platform-native interpreters
+- peinject: Reflective binary payload delivery
+- rundir: Directory enumeration and filesystem browsing
+
+OPERATIONAL CHARACTERISTICS:
+- Beacon interval: 60 seconds
+- Session UID: 16-character random alphanumeric
+- Message encoding: Base64-encoded JSON
+- Transport: HTTP POST
+- Reconnaissance: Collects hostname, username, OS version, timezone, boot time, install date, hardware model, CPU type, and running processes
+- Time to compromise: approximately 15 seconds from npm install
+- Anti-forensics: Dropper deletes setup.js, replaces tampered package.json with clean version
+
+AFFECTED SECTORS:
+Business services, financial services, high tech, higher education, insurance, media, medical equipment, professional services, retail. Geographies: U.S., Europe, Middle East, South Asia, Australia.
+
+REMEDIATION GUIDANCE:
+- Assume ALL machine-accessible secrets are compromised if artifacts found
+- Rotate: npm tokens, AWS keys, SSH private keys, cloud credentials, CI/CD secrets, .env file values
+- Completely rebuild compromised environments from known-good state
+- Clear npm, yarn, and pnpm caches
+- Block egress to sfrclak.com, callnrwise.com, and 142.11.206.73
+- Monitor for the spoofed IE8 user-agent string in network logs
+- Use npm ci (not npm install) in CI/CD pipelines
+- Configure corporate registries to reject packages without cryptographic build provenance`
 
 /**
  * Parse findings from a Technical Report HTML.
