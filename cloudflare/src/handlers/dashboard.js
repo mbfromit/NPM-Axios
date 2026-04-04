@@ -183,7 +183,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 <!-- Choice screen -->
 <div id="choice">
   <div class="lbox">
-    <h1>RATCATCHER 2.0</h1>
+    <img src="https://raw.githubusercontent.com/mbfromit/RatCatcher/main/RatCatcher2.png" alt="RatCatcher 2.0" style="max-width:280px;display:block;margin:0 auto 10px">
     <p class="sub">Endpoint Security Scanner</p>
     <button class="btn" id="goAdmin">&#9881; Admin Dashboard</button>
     <div class="div-or">&mdash; OR &mdash;</div>
@@ -195,7 +195,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 <!-- Admin login -->
 <div id="login">
   <div class="lbox">
-    <h1>RATCATCHER 2.0</h1>
+    <img src="https://raw.githubusercontent.com/mbfromit/RatCatcher/main/RatCatcher2.png" alt="RatCatcher 2.0" style="max-width:280px;display:block;margin:0 auto 10px">
     <p style="text-align:center;color:#58a6ff;font-size:0.9rem;cursor:pointer;margin-bottom:28px" onclick="document.getElementById('wn-overlay').classList.add('open')"><span style="text-decoration:underline">Read What's New</span> &rarr;</p>
     <form id="lf">
       <input type="password" id="pw" placeholder="Admin password" autocomplete="current-password">
@@ -209,7 +209,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 <!-- User login -->
 <div id="ulogin">
   <div class="lbox">
-    <h1>RATCATCHER 2.0</h1>
+    <img src="https://raw.githubusercontent.com/mbfromit/RatCatcher/main/RatCatcher2.png" alt="RatCatcher 2.0" style="max-width:280px;display:block;margin:0 auto 10px">
     <p class="sub">View My Scans</p>
     <p class="uhelp">Enter the <strong style="color:#ccc">username</strong> you were logged in as when your RatCatcher scan was run.<br><br>Not sure? Check the top of your scan output, or open Command Prompt and type <code>whoami</code>.</p>
     <form id="ulf">
@@ -728,75 +728,6 @@ async function aiEval(id,btn,hostname,username){
     btn.disabled=false;btn.classList.remove('running');btn.textContent='AI Eval';
   }
 }
-document.getElementById('aiallbtn').addEventListener('click',async function(){
-  this.disabled=true;this.textContent='Loading...';
-  openAiModal('BULK AI VERIFICATION');
-  var findChk=addCheckItem('Finding unreviewed submissions...','active');
-  try{
-    var r=await fetch(B+'/api/submissions?page=1&limit=100&reviewed=0',{headers:{'X-Admin-Password':pw}});
-    var d=await r.json();
-    var pending=(d.submissions||[]).filter(function(s){return !s.ai_verdict&&s.verdict==='COMPROMISED'});
-    if(!pending.length){this.disabled=false;this.textContent='AI Evaluate All';completeCheckItem(findChk,'No unreviewed submissions to evaluate');document.getElementById('ai-m-close').style.display='block';return;}
-    completeCheckItem(findChk,'Found '+pending.length+' unreviewed submission(s)');
-    document.getElementById('ai-m-title').textContent='BULK AI VERIFICATION  - '+pending.length+' SUBMISSION(S)';
-    var ready=await ensureModelReady();
-    if(!ready){this.disabled=false;this.textContent='AI Evaluate All';return;}
-    addCheckItem('Starting bulk analysis...','done');
-    var totalThreats=0,totalClean=0,totalErr=0;
-    for(var i=0;i<pending.length;i++){
-      var sub=pending[i];
-      var status=document.getElementById('ai-m-status');
-      status.innerHTML='<span class="ai-spinner"></span> Evaluating submission '+(i+1)+' of '+pending.length+': '+esc(sub.hostname)+' ('+esc(sub.username)+')...';
-      var hdr=document.createElement('div');
-      hdr.style.cssText='color:#58a6ff;font-family:monospace;font-size:12px;font-weight:bold;letter-spacing:1px;margin-top:'+(i>0?'18':'0')+'px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #21262d';
-      hdr.innerHTML='&#9654; '+esc(sub.hostname)+' - '+esc(sub.username)+' ('+esc(new Date(sub.submitted_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'}))+')';
-      document.getElementById('ai-m-findings').appendChild(hdr);
-      try{
-        var ar=await fetch(B+'/api/submissions/'+sub.id+'/ai-verify',{method:'POST',headers:{'X-Admin-Password':pw}});
-        var ad=await ar.json();
-        if(!ar.ok){
-          var errEl=document.createElement('div');errEl.className='ai-finding';
-          errEl.innerHTML='<div class="ai-f-hdr"><span class="ai-f-verdict error">ERROR</span></div><div class="ai-f-reason">'+esc(ad.error||'Failed')+'</div>';
-          document.getElementById('ai-m-findings').appendChild(errEl);
-          totalErr++;continue;
-        }
-        if(ad.ai_verdict==='AI_COMPROMISE')totalThreats++;else totalClean++;
-        var verdictEl=document.createElement('div');
-        verdictEl.style.cssText='font-family:monospace;font-size:11px;font-weight:bold;margin-bottom:6px;padding:4px 10px;border-radius:3px;display:inline-block;'
-          +(ad.ai_verdict==='AI_COMPROMISE'?'background:rgba(248,81,73,.15);color:#f85149;border:1px solid rgba(248,81,73,.3)':'background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.3)');
-        verdictEl.textContent=ad.ai_verdict==='AI_COMPROMISE'?'CONFIRMED COMPROMISE':'FALSE POSITIVE  - RAT Free';
-        document.getElementById('ai-m-findings').appendChild(verdictEl);
-        var vr=await fetch(B+'/api/submissions/'+sub.id+'/ai-verdicts',{headers:{'X-Admin-Password':pw}});
-        var vd=await vr.json();
-        if(vr.ok&&vd.verdicts){vd.verdicts.forEach(function(f){
-          addFindingToModal(f);
-          addCsvRow(sub.hostname,sub.username,f.category,verdictLabel(f.verdict),f.reason,f.description);
-        });}
-      }catch(e){
-        var errEl2=document.createElement('div');errEl2.className='ai-finding';
-        errEl2.innerHTML='<div class="ai-f-hdr"><span class="ai-f-verdict error">ERROR</span></div><div class="ai-f-reason">'+esc(e.message)+'</div>';
-        document.getElementById('ai-m-findings').appendChild(errEl2);
-        addCsvRow(sub.hostname,sub.username,'','ERROR',e.message,'');
-        totalErr++;
-      }
-    }
-    var sum=document.getElementById('ai-m-summary');
-    var sv=document.getElementById('ai-m-verdict');
-    var sc=document.getElementById('ai-m-counts');
-    sv.className='ai-s-verdict'+(totalThreats>0?' threat':' clean');
-    sv.textContent=totalThreats>0?'BULK RESULT: '+totalThreats+' COMPROMISE(S) DETECTED':'BULK RESULT: ALL SUBMISSIONS CLEAR';
-    sc.textContent='Submissions evaluated: '+pending.length+' | Threats: '+totalThreats+' | Clear: '+totalClean+(totalErr?' | Errors: '+totalErr:'');
-    sum.classList.add('show');
-    document.getElementById('ai-m-save').style.display='block';
-    status.className='ai-status done';
-    status.textContent='Bulk evaluation complete  - '+pending.length+' submission(s) processed';
-    document.getElementById('ai-m-close').style.display='block';
-    await Promise.all([loadStats(),loadRows()]);
-  }catch(e){
-    alert('Bulk AI eval error: '+e.message);
-  }
-  this.disabled=false;this.textContent='AI Evaluate All';
-});
 // -- Manager certification --
 var certSubId=null;
 function openCertify(id,hostname){
