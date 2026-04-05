@@ -14,8 +14,10 @@ You can read more about the attack here: https://thehackernews.com/2026/03/axios
 - **Manager Certification** - When AI confirms a compromise, a manager must review the findings and certify with their name before the case is closed. Creates an audit trail.
 - **AI Verdicts in Reports** - Technical Reports show AI assessments inline on each finding with colour-coded verdicts and reasoning.
 - **Updated Threat Intelligence** - AI uses the latest IOCs from Elastic Security Labs, Unit42, Microsoft, and Google Threat Intelligence, including the confirmed North Korean state actor attribution.
+- **Remediation Tracking** - Machines that were previously compromised but scanned clean are flagged as Remediated. Click any hostname to see full scan history.
+- **Simplified Dashboard** - Six filter cards: Total, Clean, Reviewed, Positive Findings, Unreviewed, and Remediated. Every submission is accounted for.
 - **Faster Scans** - Scanner skips non-development directories (media, drivers, VMs) to reduce scan time and false positives.
-- **Status Legend** - Built-in legend explaining every dashboard status badge.
+- **Status Legend** - Built-in legend explaining every dashboard status badge and manager certification flow.
 
 > **Note:** The original Copilot Agent workflow still works exactly as before. AI is an addition, not a replacement. You can use AI only, Copilot only, or both.
 

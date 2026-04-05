@@ -36,9 +36,9 @@ input[type=password]:focus,input[type=text]:focus{outline:none;border-color:#00f
 .stat .val{font-size:1.8rem;font-weight:bold;color:#e0e0e0}
 .stat.clean .val{color:#00ff41}
 .stat.comp .val{color:#ff4444}
-.tblw{overflow-x:auto}
+.tblw{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 280px)}
 table{width:100%;border-collapse:collapse;font-size:0.82rem}
-th{background:#111;color:#444;text-align:left;padding:8px 14px;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1e1e1e}
+th{background:#111;color:#444;text-align:left;padding:8px 14px;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #1e1e1e;position:sticky;top:0;z-index:10}
 td{padding:9px 14px;border-bottom:1px solid #141414;white-space:nowrap}
 tr.comp td{background:rgba(220,38,38,0.07)}
 tr.comp .vrd{color:#ff4444;font-weight:bold}
@@ -70,9 +70,11 @@ tr:hover td{background:#1a1a1a}
 .reviewed{color:#3fb950;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px}
 .positive{color:#f85149;font-size:0.68rem;font-weight:bold;margin-left:6px;letter-spacing:1px;animation:pulse 2s infinite}
 tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
+td a[onclick*="filterByHost"]:hover{text-decoration:underline!important;color:#58a6ff!important}
+tr.remediated .vrd{color:#58a6ff;font-weight:bold}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 .stat.pos .val{color:#f85149}
-.stat.rvw .val{color:#3fb950}
+.stat.rvw .val{color:#d4c222}
 .stat.nrvw .val{color:#f0883e}
 .stats{flex-wrap:wrap}
 .aibtn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:3px 10px;cursor:pointer;font-family:monospace;font-size:0.72rem}
@@ -238,10 +240,10 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
   <div class="stats">
     <div class="stat selected" id="f-all"><div class="lbl">Total Scans</div><div class="val" id="s-total">-</div></div>
     <div class="stat clean" id="f-clean"><div class="lbl">Clean</div><div class="val" id="s-clean">-</div></div>
-    <div class="stat comp" id="f-comp"><div class="lbl">Compromised</div><div class="val" id="s-comp">-</div></div>
-    <div class="stat pos" id="f-pos"><div class="lbl">Positive Findings</div><div class="val" id="s-pos">-</div></div>
     <div class="stat rvw" id="f-reviewed"><div class="lbl">Reviewed</div><div class="val" id="s-reviewed">-</div></div>
-    <div class="stat nrvw" id="f-await"><div class="lbl">Awaiting Review</div><div class="val" id="s-await">-</div></div>
+    <div class="stat pos" id="f-pos"><div class="lbl">Positive Findings</div><div class="val" id="s-pos">-</div></div>
+    <div class="stat nrvw" id="f-unreviewed"><div class="lbl">Unreviewed</div><div class="val" id="s-unreviewed">-</div></div>
+    <div class="stat" id="f-remediated"><div class="lbl">Remediated</div><div class="val" id="s-remediated" style="color:#58a6ff">-</div></div>
   </div>
   <div class="search">
     <input type="text" id="srch" placeholder="Search hostname or username...">
@@ -288,17 +290,23 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
 <div class="legend-overlay" id="legend-overlay">
   <div class="legend-modal">
     <h2>STATUS LEGEND</h2>
-    <div class="legend-row"><span class="legend-badge" style="color:#00ff41">[+] CLEAN</span><span class="legend-desc">No suspicious findings were detected during the scan. No action required.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#ff4444">[!] COMPROMISED</span><span class="legend-desc">One or more findings were flagged by the scanner. Does not necessarily mean the machine is infected - findings need review.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[...] AI Evaluating</span><span class="legend-desc">Gemma 4 AI is currently analysing the findings. Results will appear automatically within 30-60 seconds.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#ff4444">[!] AI Verified Compromise</span><span class="legend-desc">AI has confirmed one or more findings match known attack indicators. This requires manager review and certification.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">[~] AI Verified RAT Free!</span><span class="legend-desc">AI has determined all findings are false positives - normal system activity unrelated to the attack.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">[+] AI Verified Clean</span><span class="legend-desc">No findings to evaluate. The scan was clean.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[!] AI Partial - Re-Evaluate</span><span class="legend-desc">AI evaluation timed out on some findings. Click Re-Evaluate to retry. Findings that were evaluated are still available.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">Awaiting Manager Review</span><span class="legend-desc">AI confirmed a compromise but no manager has certified the finding yet. A manager must open the Technical Report, review the findings, and sign off.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">Certified by [Name]</span><span class="legend-desc">A manager has reviewed the AI-verified compromise, communicated with the affected employee, and certified the finding. The manager's name and timestamp are recorded for audit.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#f85149">POSITIVE FINDING</span><span class="legend-desc">At least one finding has been confirmed as a real threat, either by AI or manual review.</span></div>
-    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">REVIEWED</span><span class="legend-desc">All findings have been reviewed and acknowledged as false positives. No threats found.</span></div>
+    <p style="color:#58a6ff;font-size:12px;margin-bottom:16px;border-bottom:1px solid #21262d;padding-bottom:10px">Dashboard Filter Cards</p>
+    <div class="legend-row"><span class="legend-badge" style="color:#e0e0e0">Total Scans</span><span class="legend-desc">All scans submitted to the dashboard. Click to clear all filters and show everything.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#00ff41">Clean</span><span class="legend-desc">No suspicious findings were detected during the scan. No action required.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">Reviewed</span><span class="legend-desc">Findings were flagged but AI or a manager determined they are all false positives. No threats found.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#f85149">Positive Findings</span><span class="legend-desc">At least one finding has been confirmed as a real threat by AI or manual review. Requires manager certification.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#f0883e">Unreviewed</span><span class="legend-desc">Findings exist but AI evaluation has not completed. This typically means the AI server was unreachable when the scan was submitted. Should normally be 0.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#58a6ff">Remediated</span><span class="legend-desc">This machine was previously compromised but the latest scan came back clean. The threat has been remediated. Click hostname to see scan history.</span></div>
+    <p style="color:#58a6ff;font-size:12px;margin:20px 0 16px;border-bottom:1px solid #21262d;padding-bottom:10px">Verdict Badges (per submission)</p>
+    <div class="legend-row"><span class="legend-badge" style="color:#00ff41">[+] CLEAN</span><span class="legend-desc">Scan completed with no suspicious findings.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[...] AI Evaluating</span><span class="legend-desc">Gemma 4 AI is currently analysing the findings. Results appear automatically within 30-60 seconds.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">[~] AI Verified RAT Free!</span><span class="legend-desc">AI determined all findings are false positives - normal system activity unrelated to the attack.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#ff4444">[!] AI Verified Compromise</span><span class="legend-desc">AI confirmed one or more findings match known attack indicators.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">[!] AI Partial - Re-Evaluate</span><span class="legend-desc">AI timed out on some findings. Click Re-Evaluate to retry.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#58a6ff">[+] REMEDIATED</span><span class="legend-desc">Machine was previously compromised but latest scan is clean.</span></div>
+    <p style="color:#58a6ff;font-size:12px;margin:20px 0 16px;border-bottom:1px solid #21262d;padding-bottom:10px">Manager Certification (Positive Findings only)</p>
+    <div class="legend-row"><span class="legend-badge" style="color:#e8a838">Awaiting Manager Review</span><span class="legend-desc">AI confirmed a compromise. A manager must open the Technical Report, review findings, and Sign &amp; Certify.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#3fb950">Certified by [Name]</span><span class="legend-desc">Manager reviewed the compromise, contacted the employee, and certified with their name. Audit trail recorded.</span></div>
     <button class="legend-close" onclick="document.getElementById('legend-overlay').classList.remove('open')">Close</button>
   </div>
 </div>
@@ -338,14 +346,21 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
     </ul>
     <p>The Acknowledge Finding and Confirm Threat buttons still work exactly as before - use them to record your final decision after reviewing the AI's assessment.</p>
 
+    <h3>Simplified Dashboard</h3>
+    <p>The dashboard now has <b>6 filter cards</b>: Total, Clean, Reviewed, Positive Findings, Unreviewed, and Remediated. Click any hostname to see all scans for that machine. Click any card to filter.</p>
+    <ul>
+      <li><b class="wn-blue">Remediated</b> (new) - machines that were previously compromised but the latest scan came back clean.</li>
+      <li><b style="color:#f0883e">Unreviewed</b> - submissions where AI evaluation failed. Should normally be 0.</li>
+    </ul>
+
     <h3>Status Legend</h3>
-    <p>Click the <b class="wn-blue">Status Legend</b> button or the <b class="wn-blue">?</b> next to the Verdict column header to see a full explanation of every status badge and what action is required.</p>
+    <p>Click the <b class="wn-blue">Status Legend</b> button or the <b class="wn-blue">?</b> next to the Verdict column header to see a full explanation of every status and what action is required.</p>
 
     <h3>Updated Threat Intelligence</h3>
-    <p>The AI now uses the latest threat intelligence from Elastic Security Labs, Unit42, Microsoft, and Google Threat Intelligence, including newly discovered IOCs, payload hashes, and the confirmed attribution to a North Korean state actor.</p>
+    <p>The AI uses the latest threat intelligence from Elastic Security Labs, Unit42, Microsoft, and Google Threat Intelligence, including newly discovered IOCs, payload hashes, and the confirmed North Korean state actor attribution.</p>
 
     <h3>Faster Scans</h3>
-    <p>The scanner now skips directories that cannot contain Node.js projects (media folders, drivers, virtual machines, etc.), reducing scan time significantly.</p>
+    <p>The scanner skips directories that cannot contain Node.js projects (media folders, drivers, virtual machines, etc.), reducing false positives.</p>
 
     <h3>Do I Still Need to Use the Copilot Agent?</h3>
     <div class="wn-highlight"><b>No, but you can if you prefer.</b> The original workflow described in the How-To guide still works exactly as before. You can use AI only, Copilot only, or both for a second opinion. The AI does not automatically acknowledge or confirm findings - <b>you still make the final decision</b>.</div>
@@ -358,6 +373,8 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
       <tr><td class="wn-dim">Threat accountability</td><td>None</td><td>Manager certification with name</td></tr>
       <tr><td class="wn-dim">AI verdicts in reports</td><td>No</td><td>Yes - inline on each finding</td></tr>
       <tr><td class="wn-dim">Downloadable AI report</td><td>No</td><td>Yes (CSV)</td></tr>
+      <tr><td class="wn-dim">Remediation tracking</td><td>No</td><td>Yes - Remediated filter card</td></tr>
+      <tr><td class="wn-dim">Scan history per host</td><td>Manual search</td><td>Click hostname to see all scans</td></tr>
       <tr><td class="wn-dim">Status legend</td><td>No</td><td>Yes - built into dashboard</td></tr>
       <tr><td class="wn-dim">Threat intelligence</td><td>Initial disclosure only</td><td>Latest from 4+ security vendors</td></tr>
       <tr><td class="wn-dim">Can I still use Copilot?</td><td>Yes</td><td>Yes - nothing removed</td></tr>
@@ -397,7 +414,7 @@ tr.ai-fp .vrd{color:#e8a838;font-weight:bold}
   </div>
 </div>
 <script>
-function _vl(s){if(s.ai_verdict==='AI_PENDING')return'[...] AI Evaluating';if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial - Re-Evaluate';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
+function _vl(s){if(s.ai_verdict==='AI_PENDING')return'[...] AI Evaluating';if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial - Re-Evaluate';if(s.remediated)return'[+] REMEDIATED';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
 function _certBadge(s){if(s.ai_verdict!=='AI_COMPROMISE')return'';if(s.certified_by)return'<span class="cert-done"> &#10003; Certified by '+esc(s.certified_by)+'</span>';return'<span class="await-review"> &#9888; Awaiting Manager Review</span>';}
 const B=location.pathname.replace(/\\/dashboard$/,''),L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
 let uPg=1,uUser='';
@@ -433,10 +450,10 @@ async function loadStats(){
     const r=await api('/api/stats'),d=await r.json();
     document.getElementById('s-total').textContent=(d.total??0).toLocaleString();
     document.getElementById('s-clean').textContent=(d.clean??0).toLocaleString();
-    document.getElementById('s-comp').textContent=(d.compromised??0).toLocaleString();
     document.getElementById('s-pos').textContent=(d.positive??0).toLocaleString();
     document.getElementById('s-reviewed').textContent=(d.reviewed??0).toLocaleString();
-    document.getElementById('s-await').textContent=(d.awaiting_cert??0).toLocaleString();
+    document.getElementById('s-unreviewed').textContent=(d.compromised??0).toLocaleString();
+    document.getElementById('s-remediated').textContent=(d.remediated??0).toLocaleString();
   }catch(e){console.error('loadStats',e)}
 }
 async function loadRows(){
@@ -448,7 +465,7 @@ async function loadRows(){
   } else {
     d.submissions.forEach(s=>{
       const tr=document.createElement('tr');
-      tr.className=s.ai_verdict==='AI_FALSE_POSITIVE'?'ai-fp':s.verdict==='COMPROMISED'?'comp':'clean';
+      tr.className=s.remediated?'remediated':s.ai_verdict==='AI_FALSE_POSITIVE'?'ai-fp':s.verdict==='COMPROMISED'?'comp':'clean';
       const dt=new Date(s.submitted_at).toLocaleString('en-GB',{dateStyle:'short',timeStyle:'short'});
       const ltag=s.is_latest?'<span class="latest">LATEST</span>':'';
       const aiBtn=s.ai_verdict==='AI_PENDING'
@@ -456,7 +473,7 @@ async function loadRows(){
         :s.ai_verdict==='AI_PARTIAL'
         ?'<button class="aibtn" style="border-color:#e8a838;color:#e8a838" onclick="aiEval(&#39;'+esc(s.id)+'&#39;,this,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">&#9888; Re-Evaluate</button>'
         :'';
-      tr.innerHTML='<td>'+esc(dt)+'</td><td>'+esc(s.hostname)+ltag+'</td><td>'+esc(s.username)+'</td>'
+      tr.innerHTML='<td>'+esc(dt)+'</td><td><a href="#" style="color:inherit;text-decoration:none" onclick="filterByHost(&#39;'+esc(s.hostname)+'&#39;);return false" title="Click to see all scans for this host">'+esc(s.hostname)+'</a>'+ltag+'</td><td>'+esc(s.username)+'</td>'
         +'<td>'+esc(fmtDur(s.duration))+'</td>'
         +'<td class="vrd">'+_vl(s)+_certBadge(s)+(s.positive?'<span class="positive"> &#9888; POSITIVE FINDING</span>':s.reviewed?'<span class="reviewed"> &#10003; REVIEWED</span>':'')+'</td>'
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
@@ -514,21 +531,31 @@ document.getElementById('admtog').addEventListener('click',function(){
   this.classList.toggle('active');
   document.getElementById('dash').classList.toggle('admin-on');
 });
+function filterByHost(hostname){
+  vfilter='';rfilter='';pfilter='';pg=1;
+  srchQ=hostname;
+  document.getElementById('srch').value=hostname;
+  document.querySelectorAll('.stat').forEach(function(el){el.classList.remove('selected')});
+  document.getElementById('f-all').classList.add('selected');
+  loadRows();
+}
 function setFilter(v,rv,pf){
   vfilter=v;rfilter=rv??'';pfilter=pf??'';pg=1;
+  srchQ='';document.getElementById('srch').value='';
   document.querySelectorAll('.stat').forEach(el=>el.classList.remove('selected'));
   if(pf)document.getElementById('f-pos').classList.add('selected');
   else if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
-  else if(rv==='await')document.getElementById('f-await').classList.add('selected');
-  else document.getElementById(v==='CLEAN'?'f-clean':v==='COMPROMISED'?'f-comp':'f-all').classList.add('selected');
+  else if(rv==='unreviewed')document.getElementById('f-unreviewed').classList.add('selected');
+  else if(rv==='remediated')document.getElementById('f-remediated').classList.add('selected');
+  else document.getElementById(v==='CLEAN'?'f-clean':'f-all').classList.add('selected');
   loadRows();
 }
 document.getElementById('f-all').addEventListener('click',()=>setFilter('','',''));
 document.getElementById('f-clean').addEventListener('click',()=>setFilter('CLEAN','',''));
-document.getElementById('f-comp').addEventListener('click',()=>setFilter('COMPROMISED','',''));
+document.getElementById('f-unreviewed').addEventListener('click',function(){setFilter('','unreviewed','')});
 document.getElementById('f-pos').addEventListener('click',()=>setFilter('','','1'));
 document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1',''));
-document.getElementById('f-await').addEventListener('click',function(){setFilter('','await','')});
+document.getElementById('f-remediated').addEventListener('click',function(){setFilter('','remediated','')});
 let srchTimer=null;
 document.getElementById('srch').addEventListener('input',function(){
   clearTimeout(srchTimer);
