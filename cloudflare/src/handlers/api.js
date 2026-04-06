@@ -1,4 +1,4 @@
-import { json, checkAdminPassword } from '../util.js'
+import { json, checkAdminPassword, escapeHtml } from '../util.js'
 
 export async function handleSubmissions(request, env) {
   if (!checkAdminPassword(request, env)) return json({ error: 'Unauthorized' }, 401)
@@ -703,8 +703,8 @@ function _rcViewFull(){
     }
 
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
-  } catch {
-    return new Response('Internal Server Error', { status: 500, headers: { 'Content-Type': 'text/plain' } })
+  } catch (err) {
+    return new Response('Internal Server Error: ' + (err.message || err), { status: 500, headers: { 'Content-Type': 'text/plain' } })
   }
 }
 
