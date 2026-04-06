@@ -111,9 +111,11 @@ $resolvedPaths = [System.Collections.Generic.List[string]]@(
 )
 
 # ── Confirmation prompt ────────────────────────────────────────────────────────
+$detectedOS = if ($IsWindows) { 'Windows' } elseif ($IsMacOS) { 'macOS' } else { 'Linux' }
 Write-Host ''
 Write-Host '================================================================'
 Write-Host "  RATCATCHER v$RatCatcherVersion"
+Write-Host "  Platform: $detectedOS | PowerShell $($PSVersionTable.PSVersion)"
 Write-Host '================================================================'
 Write-Host ''
 Write-Host '  The following folders will be scanned on this machine:'
