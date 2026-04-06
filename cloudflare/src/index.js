@@ -2,10 +2,23 @@ import { handleSubmit }                                    from './handlers/subm
 import { handleSubmissions, handleStats, handleReport, handleDeleteSubmission, handleExport, handleUserSubmissions } from './handlers/api.js'
 import { handleDashboard }                                 from './handlers/dashboard.js'
 import { handleGetAcks, handlePostAck, handleDeleteAck, handleUpdateFindingsCount, handleCertify, handleOverrideVerdict } from './handlers/ack.js'
-import { handleAiVerify, handleGetAiVerdicts, handleAiVerifyAll, handleAiStatus, handleAiWarmup } from './handlers/ai-verify.js'
+import { handleAiVerify, handleGetAiVerdicts, handleAiVerifyAll, handleAiStatus, handleAiWarmup, verifySubmissionFindings } from './handlers/ai-verify.js'
 import { handleUserReport }                                from './handlers/userReport.js'
 
 export default {
+  async scheduled(event, env, ctx) {
+    // Retry stuck AI_PENDING submissions every 5 minutes
+    if (!env.AI_TUNNEL_URL || !env.AI_API_KEY) return
+    const rows = await env.DB.prepare(
+      "SELECT id FROM submissions WHERE ai_verdict = 'AI_PENDING' ORDER BY submitted_at ASC LIMIT 5"
+    ).all()
+    for (const row of (rows.results ?? [])) {
+      try {
+        await verifySubmissionFindings(row.id, env)
+      } catch { /* continue to next */ }
+    }
+  },
+
   async fetch(request, env, ctx) {
     const url  = new URL(request.url)
     const path = url.pathname

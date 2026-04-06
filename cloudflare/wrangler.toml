@@ -15,6 +15,9 @@ bucket_name = "ratcatcher-reports"
 pattern = "mbfromit.com/ratcatcher/*"
 zone_name = "mbfromit.com"
 
+[triggers]
+crons = ["*/5 * * * *"]
+
 # ── Dev environment (feature/ai-verification) ────────────────────────────────
 [env.dev]
 name = "ratcatcher-dev"
