@@ -58,6 +58,10 @@ tr:hover td{background:#1a1a1a}
 .dbtn{background:none;border:1px solid #4a1a1a;color:#ff4444;padding:3px 8px;cursor:pointer;font-family:monospace;font-size:0.72rem;display:none}
 .dbtn:hover{background:#4a1a1a;border-color:#ff4444}
 .admin-on .dbtn{display:inline-block}
+.rescanbtn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:3px 8px;cursor:pointer;font-family:monospace;font-size:0.72rem;display:none}
+.rescanbtn:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
+.rescanbtn:disabled{opacity:0.5;cursor:default}
+.admin-on .rescanbtn{display:inline-block}
 .xbtn{background:none;border:1px solid #2a2a2a;color:#555;padding:4px 10px;cursor:pointer;font-size:0.78rem;font-family:monospace;display:none}
 .xbtn:hover{border-color:#00ff41;color:#00ff41}
 .admin-on .xbtn{display:inline-block}
@@ -149,6 +153,17 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
 .legend-desc{font-size:11px;color:#8b949e;line-height:1.6}
 .legend-close{background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:10px 24px;font-family:monospace;font-size:12px;border-radius:4px;cursor:pointer;margin-top:20px;display:block}
 .legend-close:hover{background:#30363d;border-color:#484f58}
+.rc-dialog-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10003;align-items:center;justify-content:center}
+.rc-dialog-overlay.open{display:flex}
+.rc-dialog{background:#0d1117;border:1px solid #21303f;border-radius:8px;padding:24px 28px;width:420px;max-width:90vw;font-family:monospace}
+.rc-dialog-title{color:#00ff41;font-size:13px;font-weight:bold;letter-spacing:2px;margin-bottom:14px}
+.rc-dialog-msg{color:#c9d1d9;font-size:12px;line-height:1.6;margin-bottom:18px}
+.rc-dialog-btns{display:flex;gap:10px;justify-content:flex-end}
+.rc-dialog-btns button{padding:7px 20px;font-family:monospace;font-size:12px;border-radius:4px;cursor:pointer}
+.rc-dialog-ok{background:#238636;border:1px solid #2ea043;color:#fff;font-weight:bold}
+.rc-dialog-ok:hover{background:#2ea043}
+.rc-dialog-cancel{background:none;border:1px solid #2a2a2a;color:#6e7681}
+.rc-dialog-cancel:hover{border-color:#555;color:#ccc}
 .modal-x{position:absolute;top:16px;right:20px;background:none;border:none;color:#484f58;font-size:22px;cursor:pointer;font-family:monospace;line-height:1;padding:4px 8px}
 .modal-x:hover{color:#c9d1d9}
 .vrd-help{color:#58a6ff;cursor:pointer;font-size:0.72rem;margin-left:4px;text-decoration:none}
@@ -373,6 +388,14 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
       <tr><td>No accountability tracking</td><td>Manager name recorded with certification</td></tr>
     </table>
 
+    <h3>Admin Tools</h3>
+    <p>Click the <b>Admin</b> gear icon in the top right to reveal additional tools:</p>
+    <ul>
+      <li><b class="wn-blue">Re-scan AI</b> - Re-evaluate a submission with Gemma. Overwrites the existing AI verdict. Use when an evaluation got stuck or you want a fresh opinion.</li>
+      <li><b class="wn-red">Delete</b> - Permanently remove a submission and its reports.</li>
+      <li><b>Export CSV</b> - Download all scan data as a spreadsheet.</li>
+    </ul>
+
     <h3>The Copilot Agent</h3>
     <p>You can still use the O365 Copilot RatCatcher Agent exactly as described in the original How-To guide. It has not been removed or changed. Use it as a second opinion if you want to verify the AI's assessment.</p>
 
@@ -443,6 +466,9 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
       <li><b style="color:#f0883e">Unreviewed</b> - submissions where AI evaluation failed. Should normally be 0.</li>
     </ul>
 
+    <h3>Re-scan With AI (Admin)</h3>
+    <p>Admins can re-evaluate any COMPROMISED submission by clicking the <b class="wn-blue">Re-scan AI</b> button (visible in Admin mode). This sends the findings back to Gemma for fresh evaluation, overwriting the previous verdict. Useful for stuck evaluations, updated threat intelligence, or getting a second opinion.</p>
+
     <h3>Status Legend</h3>
     <p>Click the <b class="wn-blue">Status Legend</b> button or the <b class="wn-blue">?</b> next to the Verdict column header to see a full explanation of every status and what action is required.</p>
 
@@ -503,7 +529,32 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
     </div>
   </div>
 </div>
+<div class="rc-dialog-overlay" id="rc-dialog">
+  <div class="rc-dialog">
+    <div class="rc-dialog-title">RATCATCHER SAYS</div>
+    <div class="rc-dialog-msg" id="rc-dialog-msg"></div>
+    <div class="rc-dialog-btns" id="rc-dialog-btns"></div>
+  </div>
+</div>
 <script>
+var _rcDialogResolve=null;
+function rcAlert(msg){
+  return new Promise(function(resolve){
+    document.getElementById('rc-dialog-msg').textContent=msg;
+    document.getElementById('rc-dialog-btns').innerHTML='<button class="rc-dialog-ok" id="rc-dialog-ok">OK</button>';
+    document.getElementById('rc-dialog').classList.add('open');
+    document.getElementById('rc-dialog-ok').onclick=function(){document.getElementById('rc-dialog').classList.remove('open');resolve(true)};
+  });
+}
+function rcConfirm(msg){
+  return new Promise(function(resolve){
+    document.getElementById('rc-dialog-msg').textContent=msg;
+    document.getElementById('rc-dialog-btns').innerHTML='<button class="rc-dialog-cancel" id="rc-dialog-no">Cancel</button><button class="rc-dialog-ok" id="rc-dialog-yes">OK</button>';
+    document.getElementById('rc-dialog').classList.add('open');
+    document.getElementById('rc-dialog-yes').onclick=function(){document.getElementById('rc-dialog').classList.remove('open');resolve(true)};
+    document.getElementById('rc-dialog-no').onclick=function(){document.getElementById('rc-dialog').classList.remove('open');resolve(false)};
+  });
+}
 function _vl(s){if(s.ai_verdict==='AI_PENDING')return'[...] AI Evaluating';if(s.ai_verdict==='AI_COMPROMISE')return'[!] AI Verified Compromise';if(s.ai_verdict==='AI_FALSE_POSITIVE')return'[~] AI Verified RAT Free!';if(s.ai_verdict==='AI_CLEAN')return'[+] AI Verified Clean';if(s.ai_verdict==='AI_PARTIAL')return'[!] AI Partial - Re-Evaluate';if(s.remediated)return'[+] REMEDIATED';return s.verdict==='COMPROMISED'?'[!] COMPROMISED':'[+] CLEAN'}
 function _certBadge(s){if(s.ai_verdict!=='AI_COMPROMISE')return'';if(s.certified_by)return'<span class="cert-done"> &#10003; Certified by '+esc(s.certified_by)+'</span>';return'<span class="await-review"> &#9888; Awaiting Manager Review</span>';}
 const B=location.pathname.replace(/\\/dashboard$/,''),L=50;var pw='';let pg=1,refreshTimer=null,vfilter='',rfilter='',pfilter='',srchQ='';
@@ -569,6 +620,7 @@ async function loadRows(){
         +'<td><button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;brief&#39;)">Exec Brief</button> <button class="vbtn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Technical Report</button>'
         +' '+aiBtn
         +(s.ai_verdict==='AI_COMPROMISE'&&!s.certified_by?' <button class="cert-btn" onclick="vw(&#39;'+esc(s.id)+'&#39;,&#39;full&#39;)">Review &amp; Certify</button>':'')
+        +(s.verdict==='COMPROMISED'?' <button class="rescanbtn" onclick="rescanAi(&#39;'+esc(s.id)+'&#39;,this)">Re-scan AI</button>':'')
         +' <button class="dbtn" onclick="del(&#39;'+esc(s.id)+'&#39;,&#39;'+esc(s.hostname)+'&#39;,&#39;'+esc(s.username)+'&#39;)">Delete</button></td>';
       tb.appendChild(tr);
     });
@@ -580,7 +632,7 @@ async function loadRows(){
 }
 async function vw(id,type='brief'){
   const r=await api('/api/report/'+id+'/'+type);
-  if(!r.ok){alert('Failed to load report ('+r.status+')');return;}
+  if(!r.ok){await rcAlert('Failed to load report ('+r.status+')');return;}
   const blob=await r.blob();
   window.open(URL.createObjectURL(blob),'_blank');
 }
@@ -612,9 +664,9 @@ document.getElementById('lf').addEventListener('submit',async function(e){
   await showDash();
 });
 async function del(id,host,user){
-  if(!confirm('Delete submission from '+host+' ('+user+')?\\n\\nThis will permanently remove the scan record and both reports.'))return;
+  if(!await rcConfirm('Delete submission from '+host+' ('+user+')? This will permanently remove the scan record and both reports.'))return;
   const r=await fetch(B+'/api/submissions/'+id,{method:'DELETE',headers:{'X-Admin-Password':pw}});
-  if(!r.ok){alert('Delete failed ('+r.status+')');return;}
+  if(!r.ok){await rcAlert('Delete failed ('+r.status+')');return;}
   await Promise.all([loadStats(),loadRows()]);
 }
 document.getElementById('admtog').addEventListener('click',function(){
@@ -655,9 +707,9 @@ document.getElementById('srchclr').addEventListener('click',()=>{
   document.getElementById('srch').value='';srchQ='';pg=1;loadRows();
 });
 document.getElementById('logout').addEventListener('click',logout);
-document.getElementById('csvbtn').addEventListener('click',async()=>{
+document.getElementById('csvbtn').addEventListener('click',async function(){
   const r=await api('/api/export');
-  if(!r.ok){alert('Export failed ('+r.status+')');return;}
+  if(!r.ok){await rcAlert('Export failed ('+r.status+')');return;}
   const blob=await r.blob();
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download='ratcatcher-export.csv';a.click();
@@ -882,6 +934,20 @@ document.getElementById('cert-save').addEventListener('click',async function(){
     document.getElementById('cert-err').textContent='Network error - please try again.';
   }
 });
+async function rescanAi(id,btn){
+  if(!await rcConfirm('Re-scan this submission with AI? This will overwrite the existing AI verdict.'))return;
+  btn.disabled=true;btn.textContent='Scanning...';
+  try{
+    var r=await fetch(B+'/api/submissions/'+id+'/ai-verify',{method:'POST',headers:{'X-Admin-Password':pw}});
+    var d=await r.json();
+    if(!r.ok){await rcAlert('Re-scan failed: '+(d.error||r.status));btn.disabled=false;btn.textContent='Re-scan AI';return;}
+    await rcAlert('Re-scan complete: '+d.ai_verdict+' ('+d.findings_total+' findings evaluated)');
+    await Promise.all([loadStats(),loadRows()]);
+  }catch(e){
+    await rcAlert('Re-scan error: '+e.message);
+    btn.disabled=false;btn.textContent='Re-scan AI';
+  }
+}
 function openLegend(){document.getElementById('legend-overlay').classList.add('open')}
 function openWorkflow(){document.getElementById('wf-overlay').classList.add('open')}
 function openWhatsNew(){document.getElementById('wn-overlay').classList.add('open')}
@@ -934,7 +1000,7 @@ async function loadUserRows(){
 }
 async function vwUser(id,type){
   var r=await fetch(B+'/api/user-report/'+id+'/'+(type||'brief')+'?username='+encodeURIComponent(uUser));
-  if(!r.ok){alert('Failed to load report ('+r.status+')');return;}
+  if(!r.ok){await rcAlert('Failed to load report ('+r.status+')');return;}
   var blob=await r.blob();
   window.open(URL.createObjectURL(blob),'_blank');
 }

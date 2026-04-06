@@ -58,9 +58,9 @@ The Acknowledge Finding and Confirm Threat buttons still work exactly as before 
 
 ---
 
-## Bulk AI Evaluation
+## Re-scan With AI (Admin)
 
-Click **AI Evaluate All** at the bottom of the dashboard to re-evaluate all unreviewed submissions at once. A modal shows live progress with per-finding results, and you can download a **CSV report** of all results.
+Admins can re-evaluate any COMPROMISED submission by clicking the **Re-scan AI** button (visible in Admin mode). This sends the findings back to Gemma for fresh evaluation, overwriting the previous verdict. Useful for stuck evaluations, updated threat intelligence, or getting a second opinion.
 
 ---
 
