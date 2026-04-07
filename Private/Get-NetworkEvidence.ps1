@@ -98,19 +98,21 @@ function Get-NetworkEvidence {
         # ── macOS / Linux: DNS evidence ───────────────────────────────────────
         try {
             if ($IsMacOS) {
-                # Check unified log for DNS resolutions — filter out self-references from
-                # the log command itself, PowerShell, and RatCatcher processes
-                $filterOut = 'log\b|pwsh|powershell|RatCatcher|Terminal|com\.apple\.console'
+                # Check unified log for DNS resolutions
+                # Include sample log lines so the manager/AI can determine if the resolution
+                # was from actual malware or from the scanner's own log search
                 foreach ($domain in @($c2Domain, $c2Domain2)) {
                     $logOutput = & log show --predicate "eventMessage contains '$domain'" --style compact --last 1d 2>/dev/null |
-                        Where-Object { $_ -and $_ -notmatch $filterOut } |
-                        Select-Object -First 5
-                    if ($logOutput) {
+                        Select-Object -First 10
+                    # Filter out entries that are clearly from this scanner running log show
+                    $realEntries = @($logOutput | Where-Object { $_ -and $_ -notmatch 'log\s+show.*predicate' })
+                    if ($realEntries.Count -gt 0) {
+                        $sample = ($realEntries | Select-Object -First 3) -join '; '
                         $findings.Add([PSCustomObject]@{
                             Type        = 'DnsCacheHit'
-                            Detail      = "System log contains DNS resolution for $domain"
+                            Detail      = "System log contains DNS resolution for $domain - sample: $sample"
                             Severity    = 'High'
-                            Description = "$domain found in macOS unified log - machine resolved attacker domain"
+                            Description = "$domain found in macOS unified log - machine may have resolved attacker domain. Review sample log entries to confirm."
                         })
                     }
                 }
