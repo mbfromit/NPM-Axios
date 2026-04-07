@@ -105,15 +105,17 @@ function Get-NetworkEvidence {
                 foreach ($domain in @($c2Domain, $c2Domain2)) {
                     $logOutput = & log show --predicate "eventMessage contains '$domain'" --style compact --last 1d --info 2>/dev/null |
                         Select-Object -First 30
-                    # Remove blank lines, log show headers, and entries containing HTML (report generation artifacts)
+                    # Remove blank lines, log show headers, HTML report artifacts, and scanner self-references
                     $entries = @($logOutput | Where-Object {
                         $_ -and
                         $_ -notmatch '^\s*$' -and
                         $_ -notmatch 'log\s+show.*predicate' -and
                         $_ -notmatch '^Filtering the log' -and
                         $_ -notmatch '^Timestamp\s' -and
+                        $_ -notmatch 'Timestamp\s+Ty\s+Process' -and
                         $_ -notmatch '<code>|<br>|<div|<span|<strong>|</code>|<tr>|<td|<table|class=|style=|\.html|&#47;|&amp;' -and
-                        $_ -notmatch 'Skipping info and debug'
+                        $_ -notmatch 'Skipping info and debug' -and
+                        $_ -notmatch 'Process\[PID:TID\]'
                     })
                     if ($entries.Count -eq 0) { continue }
 
