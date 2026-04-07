@@ -24,7 +24,7 @@ input[type=password]:focus,input[type=text]:focus{outline:none;border-color:#00f
 .btn{display:block;width:100%;padding:10px;background:#00ff41;color:#0f0f0f;border:none;font-family:monospace;font-size:0.9rem;font-weight:bold;cursor:pointer;text-transform:uppercase;letter-spacing:1px}
 .btn:hover{background:#00cc33}
 .lerr{color:#ff4444;font-size:0.8rem;margin-top:8px;min-height:18px}
-#dash,#udash{display:none;padding:24px;max-width:1600px;margin:0 auto}
+#dash,#udash{display:none;padding:24px;max-width:1920px;margin:0 auto}
 .hdr{display:flex;align-items:baseline;gap:14px;margin-bottom:24px;border-bottom:1px solid #1a1a1a;padding-bottom:14px}
 .hdr h1{color:#00ff41;font-size:1.1rem;letter-spacing:2px}
 .hdr .badge{color:#444;font-size:0.78rem}

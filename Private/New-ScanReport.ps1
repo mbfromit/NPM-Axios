@@ -417,7 +417,7 @@ strong{color:var(--text-bright)}
 </div>
 
 <div class="rc-footer">
-  RATCATCHER v1.0 &nbsp;&#47;&#47;&nbsp; $(Esc $ScanMetadata.Hostname) &nbsp;&#47;&#47;&nbsp; Scan completed $(Esc $ScanMetadata.Timestamp)
+  RATCATCHER v2.1.0 &nbsp;&#47;&#47;&nbsp; $(Esc $ScanMetadata.Hostname) &nbsp;&#47;&#47;&nbsp; Scan completed $(Esc $ScanMetadata.Timestamp)
 </div>
 </body>
 </html>

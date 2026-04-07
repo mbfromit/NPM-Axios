@@ -133,7 +133,7 @@ $c2warning
     # ── Scan integrity ─────────────────────────────────────────────────────────
     $integrityHtml = @"
 <div class="meta-grid">
-  <span class="meta-k">Scanner Version</span><span class="meta-v">1.0</span>
+  <span class="meta-k">Scanner Version</span><span class="meta-v">2.1.0</span>
   <span class="meta-k">Checks Completed</span><span class="meta-v">8 of 8</span>
   <span class="meta-k">Scan Duration</span><span class="meta-v">$(Esc $ScanMetadata.Duration)</span>
   <span class="meta-k">Scanned Paths</span><span class="meta-v">$(Esc ($ScanMetadata.Paths -join ', '))</span>
@@ -282,7 +282,7 @@ strong{color:var(--text-bright)}p{margin-bottom:6px}
 </div>
 
 <div class="rc-footer">
-  RATCATCHER v1.0 &nbsp;&#47;&#47;&nbsp; $(Esc $ScanMetadata.Hostname) &nbsp;&#47;&#47;&nbsp; Prepared $(Esc $ScanMetadata.Timestamp)
+  RATCATCHER v2.1.0 &nbsp;&#47;&#47;&nbsp; $(Esc $ScanMetadata.Hostname) &nbsp;&#47;&#47;&nbsp; Prepared $(Esc $ScanMetadata.Timestamp)
 </div>
 </body>
 </html>
