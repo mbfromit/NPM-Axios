@@ -47,7 +47,8 @@ function Search-XorEncodedC2 {
     foreach ($scanPath in $SearchPaths) {
         try {
             Get-ChildItem -Path $scanPath -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { ($_.Extension -in $scanExts -or $_.Extension -eq '') -and $_.Length -le 5MB } |
+            Where-Object { ($_.Extension -in $scanExts -or $_.Extension -eq '') -and $_.Length -le 5MB -and $_.Length -gt 0 } |
+            Where-Object { try { [IO.File]::OpenRead($_.FullName).Dispose(); $true } catch { $false } } |
             Select-Object -First 1000 |
             ForEach-Object {
                 try {
