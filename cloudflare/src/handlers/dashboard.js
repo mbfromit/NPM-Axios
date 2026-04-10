@@ -80,6 +80,7 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
 .stat.pos .val{color:#f85149}
 .stat.rvw .val{color:#d4c222}
 .stat.nrvw .val{color:#f0883e}
+.stat.unq .val{color:#58a6ff}
 .stats{flex-wrap:wrap}
 .aibtn{background:none;border:1px solid #2a3f5f;color:#58a6ff;padding:3px 10px;cursor:pointer;font-family:monospace;font-size:0.72rem}
 .aibtn:hover{border-color:#58a6ff;background:rgba(88,166,255,.08)}
@@ -262,6 +263,7 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
     <div class="stat pos" id="f-pos"><div class="lbl">Positive Findings</div><div class="val" id="s-pos">-</div></div>
     <div class="stat nrvw" id="f-unreviewed"><div class="lbl">Unreviewed</div><div class="val" id="s-unreviewed">-</div></div>
     <div class="stat" id="f-remediated"><div class="lbl">Remediated</div><div class="val" id="s-remediated" style="color:#58a6ff">-</div></div>
+    <div class="stat unq" id="f-unique"><div class="lbl">Unique Scans</div><div class="val" id="s-unique">-</div></div>
   </div>
   <div class="search">
     <input type="text" id="srch" placeholder="Search hostname or username...">
@@ -311,6 +313,7 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
     <h2>STATUS LEGEND</h2>
     <p style="color:#58a6ff;font-size:12px;margin-bottom:16px;border-bottom:1px solid #21262d;padding-bottom:10px">Dashboard Filter Cards</p>
     <div class="legend-row"><span class="legend-badge" style="color:#e0e0e0">Total Scans</span><span class="legend-desc">All scans submitted to the dashboard. Click to clear all filters and show everything.</span></div>
+    <div class="legend-row"><span class="legend-badge" style="color:#58a6ff">Unique Scans</span><span class="legend-desc">Distinct machines (by hostname) that have submitted any scan. Click to filter the grid to each machine's most recent scan only.</span></div>
     <div class="legend-row"><span class="legend-badge" style="color:#00ff41">Clean</span><span class="legend-desc">No suspicious findings were detected during the scan. No action required.</span></div>
     <div class="legend-row"><span class="legend-badge" style="color:#3fb950">Reviewed</span><span class="legend-desc">Findings were flagged but AI or a manager determined they are all false positives. No threats found.</span></div>
     <div class="legend-row"><span class="legend-badge" style="color:#f85149">Positive Findings</span><span class="legend-desc">At least one finding has been confirmed as a real threat by AI or manual review. Requires manager certification.</span></div>
@@ -460,7 +463,7 @@ tr.remediated .vrd{color:#58a6ff;font-weight:bold}
     </ul>
 
     <h3>Simplified Dashboard</h3>
-    <p>The dashboard now has <b>6 filter cards</b>: Total, Clean, Reviewed, Positive Findings, Unreviewed, and Remediated. Click any hostname to see all scans for that machine. Click any card to filter.</p>
+    <p>The dashboard now has <b>7 filter cards</b>: Total, Clean, Reviewed, Positive Findings, Unreviewed, Remediated, and Unique Scans. Click any hostname to see all scans for that machine. Click any card to filter.</p>
     <ul>
       <li><b class="wn-blue">Remediated</b> (new) - machines that were previously compromised but the latest scan came back clean.</li>
       <li><b style="color:#f0883e">Unreviewed</b> - submissions where AI evaluation failed. Should normally be 0.</li>
@@ -595,6 +598,7 @@ async function loadStats(){
     document.getElementById('s-reviewed').textContent=(d.reviewed??0).toLocaleString();
     document.getElementById('s-unreviewed').textContent=(d.compromised??0).toLocaleString();
     document.getElementById('s-remediated').textContent=(d.remediated??0).toLocaleString();
+    document.getElementById('s-unique').textContent=(d.unique??0).toLocaleString();
   }catch(e){console.error('loadStats',e)}
 }
 async function loadRows(){
@@ -689,6 +693,7 @@ function setFilter(v,rv,pf){
   else if(rv==='1')document.getElementById('f-reviewed').classList.add('selected');
   else if(rv==='unreviewed')document.getElementById('f-unreviewed').classList.add('selected');
   else if(rv==='remediated')document.getElementById('f-remediated').classList.add('selected');
+  else if(rv==='unique')document.getElementById('f-unique').classList.add('selected');
   else document.getElementById(v==='CLEAN'?'f-clean':'f-all').classList.add('selected');
   loadRows();
 }
@@ -698,6 +703,7 @@ document.getElementById('f-unreviewed').addEventListener('click',function(){setF
 document.getElementById('f-pos').addEventListener('click',()=>setFilter('','','1'));
 document.getElementById('f-reviewed').addEventListener('click',()=>setFilter('','1',''));
 document.getElementById('f-remediated').addEventListener('click',function(){setFilter('','remediated','')});
+document.getElementById('f-unique').addEventListener('click',function(){setFilter('','unique','')});
 let srchTimer=null;
 document.getElementById('srch').addEventListener('input',function(){
   clearTimeout(srchTimer);

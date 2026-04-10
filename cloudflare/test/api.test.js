@@ -247,22 +247,22 @@ describe('handleStats', () => {
   it('returns total, clean, compromised counts', async () => {
     const env = makeEnv()
     env.DB.prepare = vi.fn(() => ({
-      first: vi.fn().mockResolvedValue({ total: 100, clean: 90, compromised: 10 })
+      first: vi.fn().mockResolvedValue({ total: 100, clean: 90, compromised: 10, unique_hosts: 75 })
     }))
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body).toEqual({ total: 100, clean: 90, compromised: 10, reviewed: 0, positive: 0 })
+    expect(body).toEqual({ total: 100, unique: 75, clean: 90, compromised: 10, reviewed: 0, positive: 0, awaiting_cert: 0, remediated: 0 })
   })
 
   it('returns zeros on empty table', async () => {
     const env = makeEnv()
     env.DB.prepare = vi.fn(() => ({
-      first: vi.fn().mockResolvedValue({ total: null, clean: null, compromised: null })
+      first: vi.fn().mockResolvedValue({ total: null, clean: null, compromised: null, unique_hosts: null })
     }))
     const res = await handleStats(get('/ratcatcher/api/stats'), env)
     const body = await res.json()
-    expect(body).toEqual({ total: 0, clean: 0, compromised: 0, reviewed: 0, positive: 0 })
+    expect(body).toEqual({ total: 0, unique: 0, clean: 0, compromised: 0, reviewed: 0, positive: 0, awaiting_cert: 0, remediated: 0 })
   })
 
   it('returns 500 when DB query fails', async () => {

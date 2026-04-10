@@ -12,7 +12,7 @@ export async function handleSubmissions(request, env) {
   const filterVerdict = validVerdicts.includes(verdict) ? verdict : null
   const search = (url.searchParams.get('search') || '').trim()
   const reviewed = url.searchParams.get('reviewed')
-  const filterReviewed = reviewed === '1' || reviewed === '0' || reviewed === 'unreviewed' || reviewed === 'remediated' ? reviewed : null
+  const filterReviewed = reviewed === '1' || reviewed === '0' || reviewed === 'unreviewed' || reviewed === 'remediated' || reviewed === 'unique' ? reviewed : null
   const positive = url.searchParams.get('positive')
 
   try {
@@ -26,6 +26,8 @@ export async function handleSubmissions(request, env) {
       conditions.push("verdict = 'COMPROMISED' AND (ai_verdict IS NULL OR ai_verdict = 'AI_PENDING' OR ai_verdict = 'AI_PARTIAL') AND (findings_count IS NULL OR findings_count = 0 OR (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) < findings_count)")
     } else if (filterReviewed === 'remediated') {
       conditions.push("verdict = 'CLEAN' AND submitted_at = (SELECT MAX(s3.submitted_at) FROM submissions s3 WHERE s3.hostname = submissions.hostname) AND EXISTS (SELECT 1 FROM submissions s4 WHERE s4.hostname = submissions.hostname AND s4.verdict = 'COMPROMISED')")
+    } else if (filterReviewed === 'unique') {
+      conditions.push("submitted_at = (SELECT MAX(s3.submitted_at) FROM submissions s3 WHERE s3.hostname = submissions.hostname)")
     } else if (filterReviewed === '1') {
       conditions.push("(ai_verdict = 'AI_FALSE_POSITIVE' OR (findings_count > 0 AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id) >= findings_count AND (SELECT COUNT(*) FROM finding_acknowledgements WHERE submission_id = submissions.id AND is_threat = 1) = 0))")
     } else if (filterReviewed === '0') {
@@ -83,6 +85,7 @@ export async function handleStats(request, env) {
     const row = await env.DB.prepare(`
       SELECT
         COUNT(*) AS total,
+        COUNT(DISTINCT s.hostname) AS unique_hosts,
         SUM(CASE WHEN verdict = 'CLEAN' THEN 1 ELSE 0 END) AS clean,
         SUM(CASE WHEN ai_verdict = 'AI_COMPROMISE' OR (ai_verdict IS NULL AND COALESCE(tc.threat_count, 0) > 0) THEN 1 ELSE 0 END) AS positive,
         SUM(CASE WHEN verdict = 'COMPROMISED'
@@ -118,6 +121,7 @@ export async function handleStats(request, env) {
 
     return json({
       total:         row?.total         ?? 0,
+      unique:        row?.unique_hosts  ?? 0,
       clean:         row?.clean         ?? 0,
       compromised:   row?.compromised   ?? 0,
       reviewed:      row?.reviewed      ?? 0,
