@@ -110,12 +110,11 @@ function Get-NetworkEvidence {
                         $_ -and
                         $_ -notmatch '^\s*$' -and
                         $_ -notmatch 'log\s+show.*predicate' -and
-                        $_ -notmatch '^Filtering the log' -and
-                        $_ -notmatch '^Timestamp\s' -and
-                        $_ -notmatch 'Timestamp\s+Ty\s+Process' -and
+                        $_ -notmatch 'Filtering the log' -and
+                        $_ -notmatch 'Timestamp\s' -and
+                        $_ -notmatch 'PID:TID' -and
                         $_ -notmatch '<code>|<br>|<div|<span|<strong>|</code>|<tr>|<td|<table|class=|style=|\.html|&#47;|&amp;' -and
-                        $_ -notmatch 'Skipping info and debug' -and
-                        $_ -notmatch 'Process\[PID:TID\]'
+                        $_ -notmatch 'Skipping info and debug'
                     })
                     if ($entries.Count -eq 0) { continue }
 
